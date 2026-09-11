@@ -505,34 +505,42 @@ function renderShotCard() {
   const wrap = document.getElementById('shot-card');
   if (!wrap) return;
   const shots = state.recentShots;
-  const posEmpty = document.getElementById('shot-pos');
   if (!shots.length) {
-    wrap.innerHTML = '<div class="sc-empty">Sem shots ainda</div>';
-    if (posEmpty) posEmpty.textContent = '';
+    wrap.innerHTML = '<div class="shot-card"><div class="sc-head"><span class="sc-hbtn" data-action="coffee-history" role="button"><span class="sc-hi">≡</span> History</span></div><div class="sc-empty">Sem shots ainda</div></div>';
     return;
   }
   const i = clamp(state.shotIndex, 0, shots.length - 1);
   state.shotIndex = i;
   const s = shots[i];
   const ratio = (s.dose > 0 && s.yield != null) ? `1:${(s.yield / s.dose).toFixed(1)}` : '—';
-  const coffee = s.coffee ? `<span class="sc-coffee">· ${s.coffee}</span>` : '';
-  const out = s.finalWeight != null ? `${fmt0(s.finalWeight)}<small>g</small>` : '—';
-  const posEl = document.getElementById('shot-pos');
-  if (posEl) posEl.textContent = `${i + 1}/${shots.length}`;   // posição vai para o cabeçalho
-  const prevOff = i === 0 ? ' is-disabled' : '';               // no 1/N não sobe (sem dar a volta)
-  const nextOff = i === shots.length - 1 ? ' is-disabled' : ''; // no N/N não desce
+  const coffee = s.coffee ? `<span class="sc-coffee">· ${esc(s.coffee)}</span>` : '';
+  const out = s.finalWeight != null ? fmt0(s.finalWeight) : '—';
+  // setas invertidas: ‹ (esquerda) vai para o mais antigo (2/5…); › (direita) volta ao mais recente (1/5)
+  const olderOff = i === shots.length - 1 ? ' is-disabled' : '';
+  const newerOff = i === 0 ? ' is-disabled' : '';
   wrap.innerHTML =
-    `<div class="shot-card" data-id="${s.id || s.ts}" data-ts="${s.ts}">
-      <div class="sc-nav">
-        <div class="sc-arrow${prevOff}" data-action="shot-prev" role="button" aria-label="Shot anterior">‹</div>
-        <div class="sc-when"><div class="sc-date">${fmtDateBR(s.ts)}</div></div>
-        <div class="sc-arrow${nextOff}" data-action="shot-next" role="button" aria-label="Próximo shot">›</div>
+    `<div class="shot-card" data-id="${s.id || s.ts}" data-ts="${esc(s.ts)}">
+      <div class="sc-head">
+        <span class="sc-hbtn" data-action="coffee-history" role="button"><span class="sc-hi">≡</span> History</span>
+        <span class="sc-pos">${i + 1} / ${shots.length}</span>
+        <span class="sc-hbtn edit" data-action="edit-shot" role="button"><span class="sc-hi">✎</span> Edit</span>
       </div>
-      <div class="sc-edit" data-action="edit-shot" role="button" aria-label="Editar shot">✎</div>
-      <div class="sc-title">${s.profile}${coffee}</div>
-      <div class="sc-metrics"><span class="sc-time">${s.duration != null ? `${fmt0(s.duration)}<small>s</small>` : '—'}</span> · <span class="sc-out">${out}</span> · <span class="sc-sub">${ratio} · grind ${s.grind != null ? s.grind : '—'}</span></div>
+      <div class="sc-nav">
+        <div class="sc-arrow${olderOff}" data-action="shot-older" role="button" aria-label="Shot mais antigo">‹</div>
+        <div class="sc-when">
+          <div class="sc-date">${fmtDateBR(s.ts)}</div>
+          <div class="sc-title">${esc(s.profile)}${coffee}</div>
+          <div class="sc-grind">${s.grinder ? esc(s.grinder) + ' · ' : ''}grind ${s.grind != null ? esc(s.grind) : '—'}</div>
+        </div>
+        <div class="sc-arrow${newerOff}" data-action="shot-newer" role="button" aria-label="Shot mais recente">›</div>
+      </div>
+      <div class="sc-metrics4">
+        <div class="sc-m time"><div class="sc-m-lb">Time</div><div class="sc-m-vv">${s.duration != null ? `${fmt0(s.duration)}<small>s</small>` : '—'}</div></div>
+        <div class="sc-m"><div class="sc-m-lb">Dose</div><div class="sc-m-vv">${fmt1(s.dose)}<small>g</small></div></div>
+        <div class="sc-m out"><div class="sc-m-lb">Out</div><div class="sc-m-vv o">${out !== '—' ? `${out}<small>g</small>` : '—'}</div></div>
+        <div class="sc-m"><div class="sc-m-lb">Ratio</div><div class="sc-m-vv">${ratio}</div></div>
+      </div>
     </div>`;
-  // tempo/gramas ausentes no registro da lista → puxa do detalhe (measurements)
   if (s.duration == null || s.finalWeight == null) fillFromSeries(s, s.duration == null, s.finalWeight == null);
 }
 // completa tempo e/ou gramas finais a partir do detalhe do shot (measurements)
@@ -541,12 +549,12 @@ async function fillFromSeries(entry, needDur, needFinal) {
   const cur = document.querySelector('#shot-card .shot-card');
   if (!s || !cur || cur.dataset.ts !== entry.ts) return;   // trocou de shot enquanto buscava
   if (needDur && s.duration != null) {
-    const el = cur.querySelector('.sc-time');
+    const el = cur.querySelector('.sc-m.time .sc-m-vv');
     if (el) el.innerHTML = `${fmt0(s.duration)}<small>s</small>`;
   }
   if (needFinal) {
     const w = s.weight && s.weight.length ? s.weight[s.weight.length - 1][1] : null;
-    const el = cur.querySelector('.sc-out');
+    const el = cur.querySelector('.sc-m.out .sc-m-vv');
     if (el && w != null) el.innerHTML = `${fmt0(w)}<small>g</small>`;
   }
 }
@@ -946,8 +954,8 @@ export function initUI(chart, source) {
       if (a === 'sim-toggle') return simToggle();
       if (a === 'browse-profiles') return browseProfiles();
       if (a === 'toggle-hidden') return toggleShowHidden();
-      if (a === 'shot-prev') return shotNav(-1);
-      if (a === 'shot-next') return shotNav(1);
+      if (a === 'shot-older') return shotNav(1);   // ‹ esquerda → mais antigo (2/5…)
+      if (a === 'shot-newer') return shotNav(-1);  // › direita → mais recente (1/5)
       if (a === 'edit-shot') return openEditShot();
       if (a === 'editshot-save') return void saveEditShot();
       if (a === 'lib-new-coffee') return libNewCoffee();

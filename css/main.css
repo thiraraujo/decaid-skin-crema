@@ -346,35 +346,43 @@ html, body {
   gap: 36px;
 }
 
-/* esquerda: últimos shots (data/hora + perfil) */
+/* esquerda: card do shot (redesign C — toolbar + setas + métricas em blocos) */
 .shot-log { flex: 0 0 33%; min-width: 0; }
-.shot-log-head {
-  font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
-  color: var(--text-3); font-weight: 600; margin-bottom: 10px;
-  display: flex; align-items: baseline; justify-content: space-between;
+.shot-card { cursor: pointer; }
+/* toolbar: History · pos · Edit (alvos grandes p/ dedo) */
+.sc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.sc-hbtn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-2);
+  background: rgba(255,255,255,.05); border: 1px solid var(--border); border-radius: 10px;
+  padding: 8px 12px; cursor: pointer; user-select: none;
 }
-.sh-pos { font-family: var(--mono); font-size: 12px; letter-spacing: 0; color: var(--text-2); text-transform: none; }
-/* card do último shot com navegação ‹ › (Opção 1, tudo centralizado) */
-.shot-card { cursor: pointer; text-align: center; }
-.sc-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.sc-hbtn:active { background: rgba(255,255,255,.09); }
+.sc-hbtn.edit { color: var(--blue); border-color: rgba(91,176,245,.45); }
+.sc-hi { font-size: 14px; line-height: 1; }
+.sc-pos { font-family: var(--mono); font-size: 12px; color: var(--text-2); }
+/* navegação: setas grandes flanqueando o conteúdo */
+.sc-nav { display: flex; align-items: center; gap: 12px; }
 .sc-arrow {
-  width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border);
+  width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--border-12, rgba(255,255,255,.14));
   color: var(--ctrl); display: flex; align-items: center; justify-content: center;
-  font-size: 18px; line-height: 1; flex: none; user-select: none; cursor: pointer;
+  font-size: 22px; line-height: 1; flex: none; user-select: none; cursor: pointer;
 }
 .sc-arrow:active { background: rgba(255,255,255,.06); }
-.sc-arrow.is-disabled { opacity: .28; pointer-events: none; }
-.sc-when { flex: 1; text-align: center; }
-.sc-date { font-family: var(--mono); font-size: 15px; color: var(--text); }
-.sc-title { font-size: 19px; color: var(--text); font-weight: 500; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sc-coffee { color: var(--amber); font-weight: 400; margin-left: 4px; }
-.sc-metrics { font-family: var(--mono); font-size: 14px; color: var(--ctrl); line-height: 1.5; }
-.sc-metrics small { color: var(--text-2); font-size: .6em; margin-left: 1px; }
-.sc-time, .sc-out { font-size: 18px; font-weight: 600; }
-.sc-time { color: var(--text); }
-.sc-out { color: var(--amber); }
-.sc-sub { color: var(--ctrl); }
-.sc-empty { color: var(--text-3); font-size: 13px; padding: 8px 0; }
+.sc-arrow.is-disabled { opacity: .25; pointer-events: none; }
+.sc-when { flex: 1; text-align: center; min-width: 0; }
+.sc-date { font-family: var(--mono); font-size: 14px; color: var(--text); }
+.sc-title { font-size: 15px; color: var(--text); font-weight: 500; margin: 4px 0 2px; line-height: 1.25; }
+.sc-coffee { color: var(--amber); font-weight: 400; margin-left: 3px; }
+.sc-grind { font-family: var(--mono); font-size: 12px; color: var(--text-2); }
+/* linha 4: tempo · dose · saída · ratio em cartõezinhos rotulados */
+.sc-metrics4 { display: flex; gap: 8px; margin-top: 12px; }
+.sc-m { flex: 1; background: rgba(255,255,255,.04); border-radius: 10px; padding: 8px 4px; text-align: center; min-width: 0; }
+.sc-m-lb { font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); }
+.sc-m-vv { font-family: var(--mono); font-size: 16px; font-weight: 600; color: var(--text); margin-top: 2px; }
+.sc-m-vv small { font-size: .6em; color: var(--text-2); margin-left: 1px; }
+.sc-m-vv.o { color: var(--amber); }
+.sc-empty { color: var(--text-3); font-size: 13px; padding: 12px 0; text-align: center; }
 
 /* direita: tabela do shot (comprimida) com divisória vertical */
 .shot-table {
