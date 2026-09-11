@@ -501,12 +501,14 @@ function fmtDateBR(ts) {
   return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}${t ? ' · ' + t : ''}` : ts;
 }
 
+const SC_ICON_HIST = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>';
+const SC_ICON_EDIT = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
 function renderShotCard() {
   const wrap = document.getElementById('shot-card');
   if (!wrap) return;
   const shots = state.recentShots;
   if (!shots.length) {
-    wrap.innerHTML = '<div class="shot-card"><div class="sc-head"><span class="sc-hbtn" data-action="coffee-history" role="button"><span class="sc-hi">≡</span> History</span></div><div class="sc-empty">Sem shots ainda</div></div>';
+    wrap.innerHTML = `<div class="shot-card"><div class="sc-empty">Sem shots ainda</div><div class="sc-roll"><div class="sc-ic" data-action="coffee-history" role="button" aria-label="Coffee history">${SC_ICON_HIST}</div></div></div>`;
     return;
   }
   const i = clamp(state.shotIndex, 0, shots.length - 1);
@@ -520,11 +522,7 @@ function renderShotCard() {
   const newerOff = i === 0 ? ' is-disabled' : '';
   wrap.innerHTML =
     `<div class="shot-card" data-id="${s.id || s.ts}" data-ts="${esc(s.ts)}">
-      <div class="sc-head">
-        <span class="sc-hbtn" data-action="coffee-history" role="button"><span class="sc-hi">≡</span> History</span>
-        <span class="sc-pos">${i + 1} / ${shots.length}</span>
-        <span class="sc-hbtn edit" data-action="edit-shot" role="button"><span class="sc-hi">✎</span> Edit</span>
-      </div>
+      <div class="sc-pos-c">${i + 1} / ${shots.length}</div>
       <div class="sc-nav">
         <div class="sc-arrow${olderOff}" data-action="shot-older" role="button" aria-label="Shot mais antigo">‹</div>
         <div class="sc-when">
@@ -534,11 +532,13 @@ function renderShotCard() {
         </div>
         <div class="sc-arrow${newerOff}" data-action="shot-newer" role="button" aria-label="Shot mais recente">›</div>
       </div>
-      <div class="sc-metrics4">
+      <div class="sc-roll">
+        <div class="sc-ic" data-action="coffee-history" role="button" aria-label="Coffee history">${SC_ICON_HIST}</div>
         <div class="sc-m time"><div class="sc-m-lb">Time</div><div class="sc-m-vv">${s.duration != null ? `${fmt0(s.duration)}<small>s</small>` : '—'}</div></div>
         <div class="sc-m"><div class="sc-m-lb">Dose</div><div class="sc-m-vv">${fmt1(s.dose)}<small>g</small></div></div>
         <div class="sc-m out"><div class="sc-m-lb">Out</div><div class="sc-m-vv o">${out !== '—' ? `${out}<small>g</small>` : '—'}</div></div>
         <div class="sc-m"><div class="sc-m-lb">Ratio</div><div class="sc-m-vv">${ratio}</div></div>
+        <div class="sc-ic edit" data-action="edit-shot" role="button" aria-label="Edit shot">${SC_ICON_EDIT}</div>
       </div>
     </div>`;
   if (s.duration == null || s.finalWeight == null) fillFromSeries(s, s.duration == null, s.finalWeight == null);
