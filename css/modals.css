@@ -1,0 +1,285 @@
+/* CREMA · modais (Coffee & Grinder, Adjustments) */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 10;
+}
+.overlay[hidden] { display: none; }
+.overlay.coffee { padding-top: 120px; }
+.overlay.adjust { padding-top: 70px; }
+.overlay.profiles { padding: 0; align-items: stretch; }
+
+.modal {
+  background: var(--modal-bg);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-modal);
+  box-shadow: var(--modal-shadow);
+}
+.modal.coffee { width: 1180px; padding: 34px 38px; }
+.modal.adjust { width: 1080px; padding: 30px 34px; }
+/* picker de perfil em TELA CHEIA, grade de 3 colunas, rolável */
+.modal.profiles {
+  width: 100%; height: 100%;
+  border: none; border-radius: 0; box-shadow: none;
+  background: var(--bg);
+  padding: 22px 32px;
+  display: flex; flex-direction: column; align-items: stretch;
+}
+.modal.profiles .modal-head { width: 100%; }
+.profile-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 18px;
+  align-content: start;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 4px;
+}
+.pp-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  border: 1px solid var(--border-soft); border-radius: var(--r-card);
+  padding: 12px 16px; cursor: pointer; min-width: 0;
+}
+.pp-card:active { background: rgba(255,255,255,.05); }
+.pp-card.selected { border-color: var(--sel-border); background: var(--sel-fill); }
+.pp-card.is-hidden { opacity: .5; }
+.pp-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.pp-name { font-size: 15px; font-weight: 600; line-height: 1.2; }
+.pp-type { font-size: 12px; color: var(--text-3); }
+.pp-vis { flex: none; }
+
+/* toggle "Show hidden" no cabeçalho */
+.ph-actions { display: flex; align-items: center; gap: 22px; }
+.ph-show-hidden { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+.ph-lbl { font-size: 13px; color: var(--text-2); }
+
+.modal-head { display: flex; justify-content: space-between; align-items: flex-start; }
+.modal-title { font-size: 28px; font-weight: 600; }
+.modal.adjust .modal-title { font-size: 26px; }
+.modal-subtitle { font-size: 15px; color: var(--text-2); margin-top: 6px; }
+.modal-close { font-size: 24px; color: var(--text-2); cursor: pointer; line-height: 1; }
+
+.btn-done {
+  background: var(--blue);
+  color: var(--on-blue);
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+}
+.btn-done.corner { font-size: 17px; padding: 11px 32px; border-radius: 24px; }
+.btn-done.full { font-size: 18px; padding: 16px 0; border-radius: 28px; margin-top: 18px; }
+.btn-done:active { filter: brightness(.92); }
+
+/* Coffee & Grinder */
+.modal-cols { display: flex; gap: 34px; margin-top: 28px; }
+.modal-col { flex: 1; }
+.col-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.col-label {
+  font-size: 12px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--text-2); font-weight: 600;
+}
+.btn-new {
+  font-size: 13px; color: var(--blue);
+  border: 1px solid var(--border); border-radius: 20px;
+  padding: 6px 18px; cursor: pointer;
+}
+.card {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-card);
+  padding: 18px 20px;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+.card:last-child { margin-bottom: 0; }
+.card.selected { border-color: var(--sel-border); background: var(--sel-fill); }
+.card-coffee-name { font-size: 21px; font-weight: 600; }
+.card-coffee-sub  { font-size: 15px; color: var(--blue); }
+.card-grinder { display: flex; justify-content: space-between; align-items: center; }
+.card-grinder-name { font-size: 19px; font-weight: 600; }
+.card-grinder-name.neutral { font-weight: 500; color: var(--ctrl); }
+.card-x { color: var(--text-2); font-size: 18px; }
+.card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.card-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+.washed-tag {
+  font-size: 12px; color: var(--text-2);
+  border: 1px solid rgba(255,255,255,.16); border-radius: 20px; padding: 2px 11px;
+}
+
+/* Adjustments */
+.section-label {
+  font-size: 12px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--text-2); font-weight: 600; margin-bottom: 14px;
+}
+.modal.adjust .modal-head { margin-bottom: 24px; align-items: center; }
+.sub-label { font-size: 13px; color: var(--ctrl-label); margin-bottom: 12px; }
+.chip-row { display: flex; gap: 12px; }
+.chip-row.mb-26 { margin-bottom: 26px; }
+.chip-row.mb-20 { margin-bottom: 20px; }
+.big-chip {
+  flex: 1; text-align: center; padding: 15px 0;
+  border: 1px solid var(--border-12); border-radius: var(--r-pill);
+  font-family: var(--mono); font-size: 19px; color: var(--ctrl);
+  cursor: pointer;
+}
+.big-chip:active { background: rgba(255,255,255,.05); }
+.big-chip.selected { border-color: var(--sel-border); background: var(--sel-fill); color: var(--blue); }
+.hotwater-label { margin-bottom: 8px; }
+.steam-row {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+}
+.steam-toggle-wrap { display: flex; align-items: center; gap: 10px; }
+.steam-state { font-size: 13px; color: var(--text-2); letter-spacing: .1em; }
+.toggle.lg { width: 46px; height: 26px; border-radius: 14px; }
+.toggle.lg .knob { width: 22px; height: 22px; }
+
+/* ---------- NUMPAD (tela cheia) ---------- */
+.overlay.numpad { padding: 0; align-items: stretch; }
+.modal.numpad {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--bg);
+  padding: 26px 40px 40px;
+  display: flex;
+  flex-direction: column;
+}
+.numpad-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--divider);
+}
+.numpad-title { font-size: 30px; font-weight: 600; letter-spacing: .02em; }
+.numpad-actions { display: flex; align-items: center; gap: 22px; }
+.numpad-cancel {
+  font-size: 15px; font-weight: 600; letter-spacing: .06em;
+  color: var(--text-2); cursor: pointer; padding: 10px 8px;
+}
+.numpad-cancel:active { color: var(--text); }
+
+.numpad-body { flex: 1; display: flex; gap: 40px; min-height: 0; padding-top: 34px; }
+.numpad-left { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.numpad-hint { font-size: 18px; color: var(--ctrl-label); margin-bottom: 16px; }
+.numpad-display {
+  border: 1px solid var(--sel-border);
+  border-radius: var(--r-card);
+  padding: 34px 40px;
+  font-family: var(--mono);
+  font-size: 68px;
+  font-weight: 600;
+  color: var(--text);
+  min-height: 132px;
+  display: flex;
+  align-items: center;
+}
+.numpad-display .unit { font-size: 40px; color: var(--text-2); align-self: center; }
+.numpad-prev-label {
+  font-size: 15px; color: var(--text-2); margin: 42px 0 14px;
+}
+.numpad-prev { display: flex; gap: 16px; flex-wrap: wrap; }
+.prev-chip {
+  min-width: 96px; text-align: center;
+  padding: 18px 22px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-card);
+  font-family: var(--mono); font-size: 22px; color: var(--ctrl);
+  cursor: pointer;
+}
+.prev-chip:active { background: rgba(255,255,255,.05); }
+
+.numpad-grid {
+  width: 46%;
+  max-width: 560px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: 1fr;
+  gap: 16px;
+}
+.key {
+  display: flex; align-items: center; justify-content: center;
+  background: #1B1E27;
+  border-radius: 16px;
+  font-family: var(--sans);
+  font-size: 34px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+.key:active { background: #23273180; background: rgba(255,255,255,.08); }
+.key[data-key="back"] { color: var(--ctrl); }
+
+/* ===== Fase 1: histórico por café + biblioteca ===== */
+.sh-link { cursor: pointer; user-select: none; }
+.sh-link:active { opacity: .7; }
+.ch-empty { color: var(--text-3); font-size: 14px; padding: 24px 4px; }
+.ch-brand { color: var(--amber); }
+/* lista de shots de um café (layout em coluna, sobrepõe a grade) */
+.profile-picker.ch-list { display: block; }
+.ch-shot {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px;
+}
+.ch-shot-top { font-family: var(--mono); font-size: 14px; color: var(--text); margin-bottom: 4px; }
+.ch-shot-metrics { font-family: var(--mono); font-size: 13px; color: var(--text-2); }
+.ch-shot-metrics small { font-size: .7em; }
+.ch-grind { color: var(--amber); }
+.ch-apply {
+  flex: none; font-size: 13px; letter-spacing: .04em; color: var(--blue);
+  border: 1px solid var(--blue); border-radius: 14px; padding: 6px 16px; cursor: pointer; user-select: none;
+}
+.ch-apply:active { background: rgba(91,176,245,.12); }
+
+/* ===== editor de shot (pickers + stepper, padrão da referência) ===== */
+.overlay.editshot { align-items: center; }
+.modal.editshot { width: 520px; padding: 28px 32px 30px; }
+.modal.editshot .modal-head { margin-bottom: 6px; }
+.modal.editshot .modal-subtitle { margin-top: 4px; }
+.es-label { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-2); margin: 16px 0 8px; }
+.es-label:first-child { margin-top: 4px; }
+.es-picker {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: rgba(255,255,255,.05); border: 1px solid var(--border); border-radius: 12px;
+  padding: 13px 16px; font-size: 16px; color: var(--text); cursor: pointer; user-select: none;
+}
+.es-picker.ph span { color: var(--text-3); }
+.es-picker svg { color: var(--text-3); flex: none; }
+.es-picker:active { border-color: rgba(255,255,255,.2); }
+.es-list { border: 1px solid var(--border); border-radius: 12px; margin-top: 6px; overflow: hidden; }
+.es-opt { padding: 12px 16px; font-size: 15px; color: var(--text); cursor: pointer; border-bottom: 1px solid var(--divider); }
+.es-opt:last-child { border-bottom: 0; }
+.es-opt:active { background: rgba(255,255,255,.06); }
+.es-list-empty { padding: 12px 16px; font-size: 13px; color: var(--text-3); }
+.es-grind { display: flex; align-items: center; gap: 12px; }
+.es-grind-val {
+  flex: 1; text-align: center; font-family: var(--mono); font-size: 24px; font-weight: 600;
+  background: rgba(255,255,255,.05); border: 1px solid var(--border); border-radius: 12px; padding: 10px 0;
+}
+.es-help { font-size: 12px; line-height: 1.5; color: var(--text-3); margin: 18px 0 16px; }
+.es-actions { display: flex; align-items: center; gap: 12px; }
+.es-btn { flex: 1; text-align: center; padding: 13px 0; border-radius: 14px; font-size: 15px; font-weight: 600; cursor: pointer; user-select: none; }
+.es-btn.ghost { color: var(--text-2); border: 1px solid var(--border); }
+.es-btn.ghost:active { background: rgba(255,255,255,.05); }
+.es-btn.primary { flex: 2; color: #0F1113; background: var(--blue); }
+.es-btn.primary:active { filter: brightness(.92); }
+
+/* ===== adicionar café/moedor (biblioteca) ===== */
+.lib-form input {
+  background: rgba(255,255,255,.05); border: 1px solid var(--border); border-radius: 10px;
+  color: var(--text); font-family: var(--sans); font-size: 15px; padding: 10px 12px; outline: none;
+}
+.lib-form input:focus { border-color: var(--blue); }
+.lib-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.lib-form-row { display: flex; gap: 8px; justify-content: flex-end; }
+.lib-add, .lib-cancel { font-size: 13px; padding: 7px 14px; border-radius: 12px; cursor: pointer; user-select: none; }
+.lib-add { color: var(--blue); border: 1px solid var(--blue); }
+.lib-cancel { color: var(--text-2); border: 1px solid var(--border); }

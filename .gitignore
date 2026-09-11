@@ -1,0 +1,3 @@
+# artefatos de build e lixo do SO — não versionar
+*.zip
+.DS_Store

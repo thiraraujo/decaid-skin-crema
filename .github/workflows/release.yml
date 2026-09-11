@@ -1,0 +1,34 @@
+name: release
+
+# Distribuição da skin CREMA via GitHub Release.
+# Empurre uma tag de versão (ex.: v0.1.0) para gerar crema.zip como asset.
+#   git tag v0.1.0 && git push origin v0.1.0
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # skin estática (sem bundler): grava a versão da tag no manifest e zipa.
+      - name: Stamp manifest version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          node -e "const f='manifest.json';const m=require('./'+f);m.version='${VERSION}';require('fs').writeFileSync(f,JSON.stringify(m,null,2)+'\n')"
+
+      - name: Package skin
+        run: |
+          zip -r crema.zip . \
+            -x '.git/*' '.github/*' '.devserver.py' 'tools/*' 'README.md' '*.DS_Store'
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: crema.zip

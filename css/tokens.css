@@ -1,0 +1,68 @@
+/* CREMA · design tokens (D4 "Editorial Cool") — direto do handoff */
+
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('../assets/fonts/HankenGrotesk.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal; font-weight: 400; font-display: swap;
+  src: url('../assets/fonts/IBMPlexMono-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal; font-weight: 500; font-display: swap;
+  src: url('../assets/fonts/IBMPlexMono-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal; font-weight: 600; font-display: swap;
+  src: url('../assets/fonts/IBMPlexMono-600.woff2') format('woff2');
+}
+
+:root {
+  /* superfícies */
+  --bg:          #0F1113;
+  --modal-bg:    #16191C;
+
+  /* texto */
+  --text:        #F2F4F6;   /* primário */
+  --text-2:      #7E858C;   /* secundário / rótulos */
+  --text-3:      #6B7178;   /* terciário (eixos, "Controls") */
+  --ctrl:        #C5CACF;   /* valores −/+, moedor */
+  --ctrl-label:  #9AA0A6;   /* rótulos de controle */
+  --on-blue:     #06121D;   /* texto sobre botão azul */
+
+  /* acentos */
+  --blue:        #5BB0F5;   /* fluxo, links, toggles, primário */
+  --green:       #5FD98E;   /* pressão, Ready/Connected */
+  --red:         #F06A4A;   /* temperatura, Disconnected */
+  --amber:       #F0A35F;   /* peso */
+
+  /* linhas / bordas */
+  --divider:     rgba(255,255,255,.08);
+  --border:      rgba(255,255,255,.14);
+  --border-soft: rgba(255,255,255,.10);
+  --border-12:   rgba(255,255,255,.12);
+  --grid-line:   rgba(255,255,255,.06);
+  --grid-base:   rgba(255,255,255,.10);
+
+  /* seleção (chips/cards azuis) */
+  --sel-border:  rgba(91,176,245,.55);
+  --sel-fill:    rgba(91,176,245,.10);
+
+  /* tipografia */
+  --sans: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+
+  /* raios */
+  --r-modal: 18px;
+  --r-card:  16px;
+  --r-pill:  24px;
+
+  /* sombra de modal */
+  --modal-shadow: 0 24px 60px rgba(0,0,0,.65);
+}

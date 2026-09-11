@@ -1,0 +1,9 @@
+{
+  "id": "crema",
+  "name": "CREMA",
+  "version": "0.1.0",
+  "author": "thiago",
+  "description": "Editorial Cool skin for the Decent DE1 (Decaid / ReaPrime).",
+  "repository": "https://github.com/thiraraujo/decaid-skin-crema",
+  "entry": "index.html"
+}
