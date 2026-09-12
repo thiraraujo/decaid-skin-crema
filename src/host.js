@@ -24,6 +24,26 @@ function setMachineState(next) {
     .catch((e) => { console.warn(`[CREMA] falha ao mudar estado para ${next}`, e); return false; });
 }
 
+// Tela do tablet (doc/Skins.md § Display): brilho 0–99 fixo, 100 = volta ao do sistema.
+export async function getDisplay() {
+  if (!state.hostConnected) return null;
+  try {
+    const r = await fetch(`http://${resolveHost()}/api/v1/display`, { cache: 'no-store' });
+    return r.ok ? await r.json() : null;
+  } catch { return null; }
+}
+
+export function setBrightness(value) {
+  const brightness = Math.min(100, Math.max(0, Math.round(value)));
+  if (!state.hostConnected) {
+    console.info(`[CREMA] brilho (mock): ${brightness}`);
+    return Promise.resolve(true);
+  }
+  return fetch(`http://${resolveHost()}/api/v1/display/brightness`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ brightness }),
+  }).then((r) => r.ok).catch((e) => { console.warn('[CREMA] falha ao mudar o brilho', e); return false; });
+}
+
 // Settings → UI do plugin de settings do app. O id pode variar entre versões,
 // então descobrimos pelo /plugins em vez de fixar "settings.reaplugin".
 let settingsPath = null;

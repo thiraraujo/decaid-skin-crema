@@ -12,6 +12,7 @@ import { initLive } from './live.js';
 import { createReadinessTracker } from './readiness.js';
 import { loadThemeFromHost } from './theme.js';
 import { loadPrefs } from './prefs.js';
+import { normalizeSaver } from './saver.js';
 import {
   initUI, renderAll, renderMachine, renderCarousel, renderLastShot, renderChart,
   onShotStarted, onShotSample, onShotEnded, selectProfile, renderStaticToggle, currentProfile,
@@ -138,7 +139,7 @@ async function boot() {
   // leitura do que é da skin mas mora no app (tema, favoritos, eixo Static, teclado);
   // começa já, em paralelo com a leitura da máquina, e entra no portão abaixo
   const themeRead = loadThemeFromHost();
-  const prefsRead = loadPrefs(['favorites', 'staticAxis', 'staticSeconds', 'numpadPrevious']);
+  const prefsRead = loadPrefs(['favorites', 'staticAxis', 'staticSeconds', 'numpadPrevious', 'saver']);
   console.info(`[CREMA v2] fonte: ${source.kind}`);
 
   initWorkflow(source);
@@ -279,6 +280,7 @@ function applyPrefs(prefs) {
   if (typeof prefs.staticSeconds === 'number') state.staticTimer = clampStaticSeconds(prefs.staticSeconds);
   renderStaticToggle();
   if (prefs.numpadPrevious && typeof prefs.numpadPrevious === 'object') state.numpadPrevious = prefs.numpadPrevious;
+  state.saver = normalizeSaver(prefs.saver);
 }
 
 async function loadProfiles(source, savedFavorites) {

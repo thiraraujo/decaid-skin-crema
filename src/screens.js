@@ -7,6 +7,9 @@ import { pushWorkflow } from './workflow.js';
 import { THEMES, applyTheme, currentTheme } from './theme.js';
 import { STATIC_AXIS } from './store.js';
 import { setStaticSeconds } from './ui.js';
+import {
+  SAVER, addImageFiles, removeImage, setSaverOn, setSaverBrightness, setSaverMinutes, previewSaver,
+} from './saver.js';
 
 let scrim = null;
 let source = null;
@@ -333,29 +336,159 @@ function buildThemes() {
       <div class="modal__title">Skin settings</div>
       <button class="btn-primary" id="th-done" type="button">Done</button>
     </div>
-    <div class="row skinset__axis">
-      <div>
-        <div class="hl">Live chart</div>
-        <div class="sub skinset__hint">With STATIC on, the time axis starts at this length and keeps growing if the shot runs longer.</div>
+    <div class="skinset">
+      <div class="skinset__col">
+        <div class="row skinset__axis">
+          <div>
+            <div class="hl">Live chart</div>
+            <div class="sub skinset__hint">With STATIC on, the time axis starts at this length and keeps growing if the shot runs longer.</div>
+          </div>
+          <div class="skinset__stepper">
+            <button class="stepper tap" id="th-axis-minus" type="button" aria-label="5 seconds less">−</button>
+            <span class="mono skinset__value" id="th-axis-value">—</span>
+            <button class="stepper tap" id="th-axis-plus" type="button" aria-label="5 seconds more">+</button>
+          </div>
+        </div>
+
+        <div class="skinset__saver">
+          <div class="row skinset__saver-head">
+            <div>
+              <div class="hl">Screensaver</div>
+              <div class="sub skinset__hint">Shows your images while the machine sleeps. Hold the screen to wake.</div>
+            </div>
+            <button class="toggle" id="sv-on" type="button" role="switch" aria-label="Screensaver"><i></i></button>
+          </div>
+          <div class="skinset__saver-body" id="sv-body">
+            <div class="skinset__saver-main">
+              <div class="skinset__thumbs" id="sv-thumbs"></div>
+              <div class="row skinset__saver-actions">
+                <button class="btn-ghost btn-ghost--sm" id="sv-add" type="button">Add images</button>
+                <span class="sub" id="sv-count"></span>
+                <button class="btn-ghost btn-ghost--sm" id="sv-preview" type="button">Preview</button>
+              </div>
+              <input type="file" id="sv-file" accept="image/*" multiple hidden>
+              <div class="row skinset__saver-interval">
+                <div class="lb">Change every</div>
+                <div class="skinset__stepper">
+                  <button class="stepper tap" id="sv-min-minus" type="button" aria-label="1 minute less">−</button>
+                  <span class="mono skinset__value" id="sv-min-value">—</span>
+                  <button class="stepper tap" id="sv-min-plus" type="button" aria-label="1 minute more">+</button>
+                </div>
+              </div>
+            </div>
+            <div class="skinset__bright">
+              <div class="lb">Brightness</div>
+              <div class="vslider" id="sv-bright" role="slider" aria-label="Screensaver brightness" aria-valuemin="0" aria-valuemax="100">
+                <div class="vslider__fill"></div>
+                <div class="vslider__knob"></div>
+              </div>
+              <div class="mono skinset__bright-value" id="sv-bright-value">—</div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="skinset__stepper">
-        <button class="stepper tap" id="th-axis-minus" type="button" aria-label="5 seconds less">−</button>
-        <span class="mono skinset__value" id="th-axis-value">—</span>
-        <button class="stepper tap" id="th-axis-plus" type="button" aria-label="5 seconds more">+</button>
+
+      <div class="skinset__col">
+        <div class="hl skinset__colors">Colors <span class="sub skinset__colors-sub">Only the colors change — the layout stays the same.</span></div>
+        <div class="themes__grid" id="th-grid"></div>
       </div>
-    </div>
-    <div class="hl skinset__colors">Colors <span class="sub skinset__colors-sub">Only the colors change — the layout stays the same.</span></div>
-    <div class="themes__grid" id="th-grid"></div>`;
+    </div>`;
   app().appendChild(themesEl);
   themesEl.querySelector('#th-done').addEventListener('click', () => closeModal(themesEl));
   themesEl.querySelector('#th-axis-minus').addEventListener('click', () => { setStaticSeconds(state.staticTimer - STATIC_AXIS.step); paintAxis(); });
   themesEl.querySelector('#th-axis-plus').addEventListener('click', () => { setStaticSeconds(state.staticTimer + STATIC_AXIS.step); paintAxis(); });
+  bindSaverSettings();
   themesEl.querySelector('#th-grid').addEventListener('click', (e) => {
     const b = e.target.closest('[data-theme-id]');
     if (!b) return;
     applyTheme(b.dataset.themeId);   // aplica na hora: o próprio modal já mostra o tema
     paintThemes();
   });
+}
+
+// ---------- proteção de tela ----------
+function bindSaverSettings() {
+  const q = (s) => themesEl.querySelector(s);
+  q('#sv-on').addEventListener('click', () => { setSaverOn(!state.saver.on); paintSaver(); });
+  q('#sv-min-minus').addEventListener('click', () => { setSaverMinutes(state.saver.minutes - SAVER.minutes.step); paintSaver(); });
+  q('#sv-min-plus').addEventListener('click', () => { setSaverMinutes(state.saver.minutes + SAVER.minutes.step); paintSaver(); });
+  q('#sv-preview').addEventListener('click', () => previewSaver());
+  q('#sv-add').addEventListener('click', () => q('#sv-file').click());
+  q('#sv-file').addEventListener('change', async (e) => {
+    const input = e.currentTarget;
+    const files = [...(input.files || [])];
+    input.value = '';
+    if (!files.length) return;
+    q('#sv-add').disabled = true;
+    const res = await addImageFiles(files, (i, n) => { q('#sv-count').textContent = `Adding ${i} of ${n}…`; paintThumbs(); });
+    q('#sv-add').disabled = false;
+    paintSaver();
+    const notes = [];
+    if (res.skipped) notes.push(`${res.skipped} over the ${SAVER.maxImages}-image limit`);
+    if (res.failed) notes.push(`${res.failed} could not be read`);
+    if (notes.length) q('#sv-count').textContent = `${state.saver.images.length} / ${SAVER.maxImages} · ${notes.join(' · ')}`;
+  });
+  q('#sv-thumbs').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-remove]');
+    if (!b) return;
+    removeImage(b.dataset.remove);
+    paintSaver();
+  });
+
+  // barra vertical: arrastar ou tocar; grava ao soltar
+  const bar = q('#sv-bright');
+  let dragging = false;
+  const valueAt = (clientY) => {
+    const r = bar.getBoundingClientRect();
+    return Math.round((1 - Math.min(1, Math.max(0, (clientY - r.top) / r.height))) * 100);
+  };
+  const show = (v) => {
+    bar.style.setProperty('--v', `${v}%`);
+    bar.setAttribute('aria-valuenow', String(v));
+    q('#sv-bright-value').textContent = `${v}%`;
+  };
+  bar.addEventListener('pointerdown', (e) => {
+    if (!state.saver.on) return;
+    dragging = true;
+    try { bar.setPointerCapture(e.pointerId); } catch { /* sem captura */ }
+    show(valueAt(e.clientY));
+  });
+  bar.addEventListener('pointermove', (e) => { if (dragging) show(valueAt(e.clientY)); });
+  const end = (e) => {
+    if (!dragging) return;
+    dragging = false;
+    setSaverBrightness(valueAt(e.clientY));
+    show(state.saver.brightness);
+  };
+  bar.addEventListener('pointerup', end);
+  bar.addEventListener('pointercancel', () => { dragging = false; show(state.saver.brightness); });
+}
+
+function paintThumbs() {
+  const imgs = state.saver.images;
+  themesEl.querySelector('#sv-thumbs').innerHTML = imgs.length
+    ? imgs.map((i) => `<span class="skinset__thumb" style="background-image:url('${i.thumb}')">
+        <button class="skinset__thumb-x" type="button" data-remove="${esc(i.id)}" aria-label="Remove image">×</button>
+      </span>`).join('')
+    : '<span class="sub skinset__thumbs-empty">No images yet — add some from a folder on the tablet.</span>';
+}
+
+function paintSaver() {
+  const s = state.saver;
+  const q = (sel) => themesEl.querySelector(sel);
+  q('#sv-on').classList.toggle('is-on', s.on);
+  q('#sv-on').setAttribute('aria-checked', String(s.on));
+  q('#sv-body').classList.toggle('is-disabled', !s.on);
+  paintThumbs();
+  q('#sv-count').textContent = `${s.images.length} / ${SAVER.maxImages}`;
+  q('#sv-add').disabled = s.images.length >= SAVER.maxImages;
+  q('#sv-preview').disabled = !s.images.length;
+  q('#sv-min-value').textContent = `${s.minutes} min`;
+  q('#sv-min-minus').disabled = s.minutes <= SAVER.minutes.min;
+  q('#sv-min-plus').disabled = s.minutes >= SAVER.minutes.max;
+  q('#sv-bright').style.setProperty('--v', `${s.brightness}%`);
+  q('#sv-bright').setAttribute('aria-valuenow', String(s.brightness));
+  q('#sv-bright-value').textContent = `${s.brightness}%`;
 }
 
 function paintAxis() {
@@ -389,6 +522,7 @@ function paintThemes() {
 export function openThemes() {
   if (!themesEl) buildThemes();
   paintAxis();
+  paintSaver();
   paintThemes();
   state.modal = 'themes';
   showModal(themesEl);

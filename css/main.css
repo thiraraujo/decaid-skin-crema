@@ -370,6 +370,28 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   animation: veil-in .3s ease-out;
 }
 @keyframes veil-in { from { opacity: 0; } }
+/* proteção de tela: fora do canvas escalado, cobre a tela inteira */
+.saver {
+  position: fixed; inset: 0; z-index: 1000;
+  background: #000; overflow: hidden;
+  touch-action: none; user-select: none; -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.saver__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.saver__img:not([src]) { display: none; }
+.saver__hint {
+  position: absolute; left: 50%; bottom: 12vh; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 14px 26px; border-radius: 999px;
+  background: rgba(0, 0, 0, .55); color: rgba(255, 255, 255, .9);
+  font: 600 2.2vh var(--sans); letter-spacing: .12em; text-transform: uppercase;
+  pointer-events: none;
+}
+.saver__hold { display: block; width: 16vh; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, .25); overflow: hidden; }
+.saver__hold i { display: block; height: 100%; width: 0; background: #fff; }
+.saver__hint:not(.is-holding) .saver__hold { visibility: hidden; }
+.saver__hint.is-holding .saver__hold i { width: 100%; transition: width 1s linear; }
+
 .sleep-veil__icon { color: var(--blue); opacity: .5; }
 .sleep-veil__title { font: 600 13px var(--sans); letter-spacing: .2em; text-transform: uppercase; color: var(--text-2); }
 .sleep-veil__hint { font: 500 15px var(--sans); color: var(--muted); }
