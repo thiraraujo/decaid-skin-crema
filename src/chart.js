@@ -2,13 +2,14 @@
 // Espelha docs/handoff-v2/Chart.dc.html: mesmas escalas, séries, rótulos e eixos.
 //
 //   plan  → curva planejada do perfil (fases pontilhadas, sem peso)
-//   shot  → shot gravado (realizado + peso, eixo direito em g)
-//   live  → shot em andamento (realizado sólido + plano tracejado a 55%)
+//   shot  → shot gravado (realizado + peso + alvos gravados, tracejados)
+//   live  → shot em andamento (realizado sólido + alvos da máquina tracejados,
+//           desenhados só até o instante atual)
 //
-// Escalas: pressão/fluxo 0–12 · temperatura 0–100 °C · peso 0–50 g.
+// Escalas: pressão/fluxo 0–12 · temperatura 0–100 °C · peso 0–100 g (eixo sem números).
 
 const W = 1000, H = 560;
-const V_PF = 12, V_TEMP = 100, V_WEIGHT = 50;
+const V_PF = 12, V_TEMP = 100, V_WEIGHT = 100;
 const SVGNS = 'http://www.w3.org/2000/svg';
 
 const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
@@ -118,7 +119,8 @@ export function createChart(host, opts = {}) {
 
   const axisW = document.createElement('div');
   axisW.className = 'chart__axis-w';
-  axisW.innerHTML = ['50', '40', '30', '20', '0'].map((t) => `<span>${t}</span>`).join('');
+  // coluna do peso mantém a largura (layout), mas sem os números da escala
+  axisW.setAttribute('aria-hidden', 'true');
 
   body.append(axisY, plot, gapEl, axisW);
 
@@ -144,7 +146,6 @@ export function createChart(host, opts = {}) {
   let mode = 'plan';        // 'plan' | 'shot' | 'live'
   let view = null;          // dados estáticos (plan/shot)
   let buffers = null;       // séries ao vivo
-  let targets = null;       // { pressure, flow } planejados do perfil ativo
   let livePhases = null;    // fases do perfil ativo, desenhadas durante o shot
   let dims = null;
   let rafId = null, dirty = false;
@@ -244,9 +245,16 @@ export function createChart(host, opts = {}) {
 
   // `straight` para as curvas do PLANO: são degraus (cada step repete o X ao trocar
   // de patamar) e a suavização Catmull-Rom transformaria isso em laços.
+  // Valor `null` interrompe a linha (alvo da bomba que não está em uso naquele step).
   const setLine = (node, pairs, vmax, tMax, straight) => {
-    const pts = pairs && pairs.length ? toXY(pairs, vmax, tMax) : [];
-    node.setAttribute('d', cfg.smooth && !straight ? curvePath(pts) : linePath(pts));
+    const segs = [];
+    let cur = [];
+    for (const p of pairs || []) {
+      if (p[1] == null) { if (cur.length) segs.push(cur); cur = []; } else cur.push(p);
+    }
+    if (cur.length) segs.push(cur);
+    const path = cfg.smooth && !straight ? curvePath : linePath;
+    node.setAttribute('d', segs.map((s) => path(toXY(s, vmax, tMax))).join(' '));
   };
 
   // Eixo X do shot ao vivo:
@@ -270,8 +278,8 @@ export function createChart(host, opts = {}) {
       const b = buffers || { pressure: [], flow: [], temp: [], weight: [] };
       const elapsed = (last(b.pressure) || [0])[0] || 0;
       const tMax = tMaxLive(elapsed);
-      setLine(line.pressTarget, targets && targets.pressure, V_PF, tMax, true);
-      setLine(line.flowTarget, targets && targets.flow, V_PF, tMax, true);
+      setLine(line.pressTarget, b.pressureTarget, V_PF, tMax, true);
+      setLine(line.flowTarget, b.flowTarget, V_PF, tMax, true);
       setLine(line.press, b.pressure, V_PF, tMax);
       setLine(line.flow, b.flow, V_PF, tMax);
       setLine(line.temp, b.temp, V_TEMP, tMax);
@@ -334,11 +342,11 @@ export function createChart(host, opts = {}) {
       view = shot ? { pressureTarget: null, flowTarget: null, ...shot } : null;
       drawNow();
     },
-    /** entra no modo ao vivo; `plan` (opcional) vira as linhas tracejadas de alvo */
+    /** entra no modo ao vivo; do `plan` saem só as fases — o tracejado vem do shot */
     showLive(plan) {
       mode = 'live';
       setThick(true);
-      targets = plan ? { pressure: plan.pressure, flow: plan.flow } : null;
+      buffers = null;
       // rótulo da fase já numerado, como na tela 02 ("1 preinfusion")
       livePhases = plan && plan.phases && plan.phases.length
         ? plan.phases.map((ph, i) => ({ ...ph, label: `${i + 1} ${ph.label}` }))

@@ -2,7 +2,7 @@
 
 import { state, setState, clampStaticSeconds } from './store.js';
 import { createChart } from './chart.js';
-import { createApiSource, detectHost } from './api.js';
+import { createApiSource, detectHost, pumpAt, activeTarget } from './api.js';
 import { createMockSource } from './mock.js';
 import { initScreens } from './screens.js';
 import { initProfiles } from './profiles.js';
@@ -14,7 +14,7 @@ import { loadThemeFromHost } from './theme.js';
 import { loadPrefs } from './prefs.js';
 import {
   initUI, renderAll, renderMachine, renderCarousel, renderLastShot, renderChart,
-  onShotStarted, onShotSample, onShotEnded, selectProfile, renderStaticToggle,
+  onShotStarted, onShotSample, onShotEnded, selectProfile, renderStaticToggle, currentProfile,
 } from './ui.js';
 
 // O canvas é fixo em 1320×800 e escalado para caber na tela real.
@@ -167,7 +167,11 @@ async function boot() {
     s.pressure.push([m.t, m.pressure]);
     s.flow.push([m.t, m.flow]);
     s.temp.push([m.t, m.temp]);
-    for (const k of ['pressure', 'flow', 'temp', 'weight']) if (s[k].length > 900) s[k].shift();
+    // linha planejada acompanha o shot: alvos que a máquina manda a cada amostra
+    const pump = pumpAt(state.live.profile, m.frame);
+    s.pressureTarget.push([m.t, activeTarget(m.targetPressure, 'pressure', pump)]);
+    s.flowTarget.push([m.t, activeTarget(m.targetFlow, 'flow', pump)]);
+    for (const k of Object.keys(s)) if (s[k].length > 900) s[k].shift();
     liveChart.update(s);
     state.live.t = m.t;
     onShotSample({
@@ -228,7 +232,11 @@ async function boot() {
   }
 
   source.onShotStart(() => {
-    state.live = { running: true, t: 0, series: { pressure: [], flow: [], temp: [], weight: [] } };
+    const p = currentProfile();
+    state.live = {
+      running: true, t: 0, profile: (p && p.raw) || null,
+      series: { pressure: [], flow: [], temp: [], weight: [], pressureTarget: [], flowTarget: [] },
+    };
     onShotStarted();
   });
 

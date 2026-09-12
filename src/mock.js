@@ -22,6 +22,21 @@ const SIM_STEPS = [
 const SIM_TOTAL = SIM_STEPS.reduce((a, s) => a + s.seconds, 0);
 
 // índice do step para o instante `t` do shot simulado (T_MAX comprimido em SIM_TOTAL)
+// alvos como a máquina manda: step de fluxo até 14 s (pressão 0), depois pressão
+function simTargets(t) {
+  if (t < 14) return { targetPressure: 0, targetFlow: 4 };
+  return { targetPressure: Number((9 - Math.max(0, t - 18) * 0.05).toFixed(2)), targetFlow: 0 };
+}
+const simTargetSeries = (d) => {
+  const pt = [], ft = [];
+  for (let i = 0; i <= 60; i++) {
+    const tt = i / 60 * d, g = simTargets(tt / d * T_MAX);
+    pt.push([tt, g.targetPressure > 0 ? g.targetPressure : null]);
+    ft.push([tt, g.targetFlow > 0 ? g.targetFlow : null]);
+  }
+  return { pt, ft };
+};
+
 function simFrame(t) {
   const scaled = t / T_MAX * SIM_TOTAL;
   let acc = 0;
@@ -183,7 +198,7 @@ export function createMockSource() {
   function tick() {
     t += TICK_MS / 1000;
     for (const cb of snapshotCbs) {
-      cb({ t, running: true, state: 'espresso', frame: simFrame(t), pressure: sample(P, t), flow: sample(F, t), mixTemp: 92.4, groupTemp: 94.1, temp: sample(T, t) });
+      cb({ t, running: true, state: 'espresso', frame: simFrame(t), pressure: sample(P, t), flow: sample(F, t), mixTemp: 92.4, groupTemp: 94.1, temp: sample(T, t), ...simTargets(t) });
     }
     if (scaleConnected) {
       const weight = Math.max(0, sample(W, t) - tareOffset);
@@ -240,15 +255,15 @@ export function createMockSource() {
       if (!s) return null;
       const d = s.duration;
       const j = ((Number(id.split('-')[1]) % 5) - 2) * 0.02;
-      // plano tracejado: o perfil com que o shot foi tirado (como no Bridge real,
-      // onde ele vem em shot.workflow.profile)
+      // fases: o perfil com que o shot foi tirado; tracejado: alvos gravados no shot
       const plan = PROFILES.find((x) => x.name === s.profile);
+      const tg = simTargetSeries(d);
       return {
         kind: 'shot', profile: s.profile, duration: d,
         pressure: scaled(P, d, j), flow: scaled(F, d, j), temp: scaled(T, d, 0),
         weight: scaled(W, d, 0).map(([tt, v]) => [tt, Number((v / 42 * s.yield).toFixed(1))]),
-        pressureTarget: plan ? plan.pressure : null,
-        flowTarget: plan ? plan.flow : null,
+        pressureTarget: tg.pt,
+        flowTarget: tg.ft,
         phases: plan && plan.phases.length
           ? plan.phases
           : [{ start: 0, end: d * 0.45, label: 'preinfusion' }, { start: d * 0.45, end: d, label: 'extraction' }],
