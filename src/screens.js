@@ -86,10 +86,12 @@ function buildAdjust() {
             <button class="toggle" id="adj-steam" type="button" role="switch"><i></i></button>
           </div>
         </div>
-        <div class="sub">Time</div>
-        <div class="opts" data-group="steamTime"></div>
-        <div class="sub">Flow</div>
-        <div class="opts" data-group="steamFlow"></div>
+        <div class="adjust__steam-body" id="adj-steam-body">
+          <div class="sub">Time</div>
+          <div class="opts" data-group="steamTime"></div>
+          <div class="sub">Flow</div>
+          <div class="opts" data-group="steamFlow"></div>
+        </div>
       </div>
     </div>
     <button class="btn-primary adjust__done" id="adj-done" type="button">Done</button>`;
@@ -105,7 +107,7 @@ function buildAdjust() {
   });
   adjustEl.addEventListener('click', (e) => {
     const b = e.target.closest('.opt');
-    if (!b) return;
+    if (!b || b.disabled) return;
     const group = b.parentElement.dataset.group;
     if (b.classList.contains('opt--custom')) {
       const spec = PRESETS[group].field;
@@ -135,19 +137,25 @@ function writeGroup(g, v) {
 function pushAux() { pushWorkflow(); }
 
 function paintAdjust() {
+  // vapor desligado: Time e Flow ficam esmaecidos e inativos
+  const steamOff = !state.aux.steam.on;
+  adjustEl.querySelector('#adj-steam-body').classList.toggle('is-disabled', steamOff);
   for (const box of adjustEl.querySelectorAll('.opts')) {
     const g = box.dataset.group;
     const spec = PRESETS[g];
     const cur = readGroup(g);
-    const isPreset = spec.opts.some((o) => o === cur);
+    const known = cur != null;
+    const isPreset = known && spec.opts.some((o) => o === cur);
+    const custom = known && !isPreset;           // valor manual fora dos presets
+    const off = steamOff && (g === 'steamTime' || g === 'steamFlow') ? ' disabled aria-disabled="true"' : '';
     box.innerHTML = spec.opts
-      .map((o) => `<button class="opt${o === cur ? ' is-on' : ''}" data-v="${o}" type="button">${o}${spec.unit}</button>`)
+      .map((o) => `<button class="opt${o === cur ? ' is-on' : ''}" data-v="${o}" type="button"${off}>${o}${spec.unit}</button>`)
       .join('') +
-      `<button class="opt opt--custom${!isPreset ? ' is-on' : ''}" type="button">
+      `<button class="opt opt--custom${custom ? ' is-on' : ''}" type="button"${off}>
          <svg class="ic" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><use href="#ic-keyboard"/></svg>
-         ${isPreset ? '' : cur + spec.unit}</button>`;
+         ${custom ? cur + spec.unit : ''}</button>`;
   }
-  const on = state.aux.steam.on;
+  const on = !!state.aux.steam.on;   // null (ainda desconhecido) conta como desligado
   adjustEl.querySelector('#adj-steam').classList.toggle('is-on', on);
   adjustEl.querySelector('#adj-steam-state').textContent = on ? 'On' : 'Off';
   adjustEl.querySelector('#adj-steam').setAttribute('aria-checked', String(on));

@@ -151,6 +151,9 @@
 .opt.is-on { border-color: var(--blue); color: var(--blue); background: var(--sel-fill); }
 .opt--custom { border-style: dashed; color: var(--label); gap: 8px; font-size: 16px; flex: .7; }
 .adjust__steam-toggle { display: flex; align-items: center; gap: 12px; }
+/* vapor desligado: Time e Flow esmaecidos e sem toque */
+.adjust__steam-body { transition: opacity .15s ease-out; }
+.adjust__steam-body.is-disabled { opacity: .35; pointer-events: none; }
 .adjust__done { margin-top: 22px; }
 
 /* ======================= 05/06 · Coffee & Grinder ======================= */

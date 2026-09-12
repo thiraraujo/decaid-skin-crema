@@ -9,6 +9,7 @@ import { openAdjust, openCoffee, openHistory, openThemes } from './screens.js';
 import { openProfiles } from './profiles.js';
 import { pushWorkflow, pushProfile, pushBrewTemp, baseTempOf } from './workflow.js';
 import { startLive, onLiveSample, endLive } from './live.js';
+import { savePref } from './prefs.js';
 
 const $ = (id) => document.getElementById(id);
 const DASH = '—';
@@ -24,7 +25,7 @@ const fmtInt = (v) => (v == null || Number.isNaN(v) ? DASH : String(Math.round(v
 function valueWithUnit(el, text, unit) {
   el.innerHTML = '';
   el.append(document.createTextNode(text));
-  if (unit) {
+  if (unit && text !== DASH) {   // valor desconhecido: só "—", sem unidade solta
     const u = document.createElement('span');
     u.className = 'u';
     u.textContent = unit;
@@ -85,7 +86,11 @@ export function renderAux() {
   const has = (v) => v != null;
   $('aux-water').textContent = has(a.hotWater.ml) && has(a.hotWater.temp)
     ? `${a.hotWater.ml}ml·${a.hotWater.temp}°` : DASH;
-  $('aux-steam').textContent = has(a.steam.time) ? (a.steam.on ? `${a.steam.time}s` : 'Off') : DASH;
+  // ligado: tempo · fluxo lado a lado, no mesmo formato da água quente
+  $('aux-steam').textContent = a.steam.on == null ? DASH
+    : !a.steam.on ? 'Off'
+    : [has(a.steam.time) ? `${a.steam.time}s` : null, has(a.steam.flow) ? `${a.steam.flow}` : null]
+        .filter(Boolean).join('·') || DASH;
   $('aux-flush').textContent = has(a.flush.s) ? `${a.flush.s}s` : DASH;
 }
 
@@ -443,10 +448,8 @@ export function initUI(chartInstance, dataSource, liveChart) {
   const tog = $('static-toggle');
   tog.addEventListener('click', () => {
     state.staticAxis = !state.staticAxis;
-    tog.classList.toggle('is-on', state.staticAxis);
-    tog.setAttribute('aria-checked', String(state.staticAxis));
-    chart.setConfig({ staticOn: state.staticAxis });
-    if (liveChartRef) liveChartRef.setConfig({ staticOn: state.staticAxis });
+    renderStaticToggle();
+    savePref('staticAxis', state.staticAxis);
   });
 
   // --- rodapé ---
@@ -556,6 +559,14 @@ function flash(btn, text) {
     btn.classList.remove('is-warn');
     delete btn.dataset.flashing;
   }, 1600);
+}
+
+export function renderStaticToggle() {
+  const tog = $('static-toggle');
+  tog.classList.toggle('is-on', state.staticAxis);
+  tog.setAttribute('aria-checked', String(state.staticAxis));
+  chart.setConfig({ staticOn: state.staticAxis });
+  if (liveChartRef) liveChartRef.setConfig({ staticOn: state.staticAxis });
 }
 
 export function renderAll() {

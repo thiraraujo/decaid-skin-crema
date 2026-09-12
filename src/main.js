@@ -6,14 +6,15 @@ import { createApiSource, detectHost } from './api.js';
 import { createMockSource } from './mock.js';
 import { initScreens } from './screens.js';
 import { initProfiles } from './profiles.js';
-import { initWorkflow, baseTempOf } from './workflow.js';
+import { initWorkflow, baseTempOf, STEAM_MIN_C, rememberSteamTemp, recallSteamTemp } from './workflow.js';
 import { initHistory } from './history.js';
 import { initLive } from './live.js';
 import { createReadinessTracker } from './readiness.js';
 import { loadThemeFromHost } from './theme.js';
+import { loadPrefs } from './prefs.js';
 import {
   initUI, renderAll, renderMachine, renderCarousel, renderLastShot, renderChart,
-  onShotStarted, onShotSample, onShotEnded, selectProfile,
+  onShotStarted, onShotSample, onShotEnded, selectProfile, renderStaticToggle,
 } from './ui.js';
 
 // O canvas é fixo em 1320×800 e escalado para caber na tela real.
@@ -133,7 +134,10 @@ async function boot() {
   const useBridge = forceMock ? false : await detectHost();
   const source = useBridge ? createApiSource() : createMockSource();
   setState({ hostConnected: useBridge });
-  loadThemeFromHost();   // tema salvo no app (sobrevive a reinstalar a skin)
+  // leitura do que é da skin mas mora no app (tema, favoritos, eixo Static, teclado);
+  // começa já, em paralelo com a leitura da máquina, e entra no portão abaixo
+  const themeRead = loadThemeFromHost();
+  const prefsRead = loadPrefs(['favorites', 'staticAxis', 'numpadPrevious']);
   console.info(`[CREMA v2] fonte: ${source.kind}`);
 
   initWorkflow(source);
@@ -152,10 +156,10 @@ async function boot() {
     mc.groupTemp = m.groupTemp;
     mc.targetMixTemp = m.targetMixTemp;
     mc.targetGroupTemp = m.targetGroupTemp;
-    // prontidão real: estado + temperaturas x alvos, com memória (src/readiness.js)
-    mc.readiness = readiness.evaluate(mc);
     mc.state = m.state || 'idle';
     mc.substate = m.substate || '';
+    // prontidão real: estado + temperaturas x alvos, com memória (src/readiness.js)
+    mc.readiness = readiness.evaluate(mc);
     renderMachine();
     if (!m.running) return;
     const s = state.live.series;
@@ -244,17 +248,39 @@ async function boot() {
     source.start && source.start();
   }
 
-  // loadLibrary define state.loadedProfileTitle → precisa vir antes de loadProfiles
-  await loadLibrary(source);
-  await Promise.all([loadProfiles(source), loadHistory(source)]);
+  // Princípio do projeto: a skin LÊ a máquina primeiro e só então libera os toques.
+  // Até aqui a tela mostra "—" e fica bloqueada (.app.is-booting); um toque precoce
+  // seria sobrescrito pela leitura, ou gravaria algo sobre um estado desconhecido.
+  const machineRead = (async () => {
+    // loadLibrary define state.loadedProfileTitle → precisa vir antes de loadProfiles
+    const [prefs] = await Promise.all([prefsRead, loadLibrary(source), themeRead]);
+    applyPrefs(prefs);
+    await Promise.all([loadProfiles(source, prefs.favorites), loadHistory(source)]);
+  })();
+  // rede com problema não pode deixar a tela travada para sempre
+  const BOOT_TIMEOUT_MS = 12000;
+  await Promise.race([machineRead, new Promise((r) => setTimeout(r, BOOT_TIMEOUT_MS))])
+    .catch((e) => console.warn('[CREMA] leitura inicial falhou', e));
   renderAll();
+  document.querySelector('.app').classList.remove('is-booting');
 }
 
-async function loadProfiles(source) {
+function applyPrefs(prefs) {
+  if (typeof prefs.staticAxis === 'boolean') state.staticAxis = prefs.staticAxis;
+  renderStaticToggle();
+  if (prefs.numpadPrevious && typeof prefs.numpadPrevious === 'object') state.numpadPrevious = prefs.numpadPrevious;
+}
+
+async function loadProfiles(source, savedFavorites) {
   const all = await source.getProfiles(true).catch(() => []);
   if (!all.length) return;
   state.profiles.all = all;
-  state.profiles.favorites = all.filter((p) => !p.hidden).slice(0, 5);
+  // favoritos escolhidos pelo usuário (gravados no app); perfis que sumiram da máquina
+  // são ignorados. Sem nada salvo, os 5 primeiros perfis visíveis.
+  const saved = Array.isArray(savedFavorites)
+    ? savedFavorites.map((k) => all.find((p) => p.key === k)).filter(Boolean).slice(0, 5)
+    : [];
+  state.profiles.favorites = saved.length ? saved : all.filter((p) => !p.hidden).slice(0, 5);
   const loaded = state.loadedProfileTitle
     && all.find((p) => p.name === state.loadedProfileTitle);
   if (loaded) {
@@ -325,9 +351,15 @@ async function loadLibrary(source) {
       if (workflow.hotWaterData.targetTemperature != null) a.hotWater.temp = workflow.hotWaterData.targetTemperature;
     }
     if (workflow.steamSettings) {
-      if (workflow.steamSettings.duration != null) a.steam.time = workflow.steamSettings.duration;
-      if (workflow.steamSettings.flow != null) a.steam.flow = workflow.steamSettings.flow;
-      a.steam.on = (workflow.steamSettings.duration ?? 0) > 0;
+      const ss = workflow.steamSettings;
+      if (ss.duration != null) a.steam.time = ss.duration;
+      if (ss.flow != null) a.steam.flow = ss.flow;
+      // ligado = temperatura de vapor na faixa suportada; 0 (ou abaixo) = desligado
+      if (typeof ss.targetTemperature === 'number') {
+        a.steam.on = ss.targetTemperature >= STEAM_MIN_C;
+        if (a.steam.on) { a.steam.temp = ss.targetTemperature; rememberSteamTemp(a.steam.temp); }
+        else a.steam.temp = await recallSteamTemp();   // desligado: a máquina tem 0 °C
+      }
     }
     // perfil carregado na máquina = o selecionado na skin
     if (workflow.profile && workflow.profile.title) state.loadedProfileTitle = workflow.profile.title;
