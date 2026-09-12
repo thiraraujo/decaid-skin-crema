@@ -1,4 +1,4 @@
-/* CREMA · design tokens (D4 "Editorial Cool") — direto do handoff */
+/* CREMA v2 · design tokens — direto de docs/handoff-v2/README.md */
 
 @font-face {
   font-family: 'Hanken Grotesk';
@@ -26,43 +26,52 @@
 :root {
   /* superfícies */
   --bg:          #0F1113;
-  --modal-bg:    #16191C;
+  --surface:     #16191C;
+  --surface-2:   #1B1F23;
 
   /* texto */
-  --text:        #F2F4F6;   /* primário */
-  --text-2:      #7E858C;   /* secundário / rótulos */
-  --text-3:      #6B7178;   /* terciário (eixos, "Controls") */
-  --ctrl:        #C5CACF;   /* valores −/+, moedor */
-  --ctrl-label:  #9AA0A6;   /* rótulos de controle */
-  --on-blue:     #06121D;   /* texto sobre botão azul */
+  --text:        #F2F4F6;
+  --text-2:      #C5CACF;   /* secundário */
+  --label:       #7E858C;   /* rótulos .lb */
+  --muted:       #6B7178;   /* apagado (eixos, fases) */
+  --text-blue:   #D5E0F2;   /* valores sobre superfície azulada */
+  --on-blue:     #0F1113;   /* texto sobre botão azul cheio */
 
   /* acentos */
-  --blue:        #5BB0F5;   /* fluxo, links, toggles, primário */
-  --green:       #5FD98E;   /* pressão, Ready/Connected */
-  --red:         #F06A4A;   /* temperatura, Disconnected */
-  --amber:       #F0A35F;   /* peso */
+  --blue:        #5BB0F5;
+  --green:       #5FD98E;
+  --red:         #F06A4A;
+  --amber:       #F0A35F;
 
   /* linhas / bordas */
-  --divider:     rgba(255,255,255,.08);
-  --border:      rgba(255,255,255,.14);
-  --border-soft: rgba(255,255,255,.10);
-  --border-12:   rgba(255,255,255,.12);
+  --hairline:    rgba(255,255,255,.08);  /* filete */
+  --border-soft: rgba(255,255,255,.10);  /* balão */
+  --divider:     rgba(255,255,255,.12);  /* divisor forte */
+  --border:      rgba(255,255,255,.14);  /* pílula */
   --grid-line:   rgba(255,255,255,.06);
-  --grid-base:   rgba(255,255,255,.10);
+  --grid-base:   rgba(255,255,255,.12);
 
-  /* seleção (chips/cards azuis) */
-  --sel-border:  rgba(91,176,245,.55);
-  --sel-fill:    rgba(91,176,245,.10);
+  /* seleção */
+  --sel-fill:    rgba(91,176,245,.12);
+  --sel-border:  rgba(91,176,245,.5);
+
+  /* carrossel: card de perfil selecionado */
+  --profile-card: linear-gradient(160deg, #2F86D8, #1C56A6);
 
   /* tipografia */
   --sans: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
 
   /* raios */
-  --r-modal: 18px;
   --r-card:  16px;
+  --r-card-lg: 20px;
   --r-pill:  24px;
+  --r-chip:  20px;
+  --r-modal: 24px;
+  --r-key:   16px;
 
-  /* sombra de modal */
-  --modal-shadow: 0 24px 60px rgba(0,0,0,.65);
+  /* sombras */
+  --shadow-card:  0 10px 30px rgba(0,0,0,.35);
+  --shadow-modal: 0 30px 80px rgba(0,0,0,.6);
+  --scrim:        rgba(0,0,0,.55);
 }

@@ -1,92 +1,152 @@
-# CREMA — skin "Editorial Cool" para a Decent DE1
+# CREMA v2 — skin "Editorial Cool" para a Decent DE1
 
 Skin web (HTML/CSS/JS, sem bundler) para o app **Decaid** / bridge **ReaPrime**.
-Tela única: rail de controles + gráfico de extração como herói + histórico por café.
+Redesign completo da v1: antes do shot, a tela lê de um golpe **Café · Moedor · Grind ·
+Ratio · Brew** e o plano do perfil; durante o shot, **o gráfico toma a tela**.
 
-> 📐 **Handoff visual (prints de todas as telas + o que cada uma faz):**
-> [branch `handoff`](https://github.com/thiraraujo/decaid-skin-crema/tree/handoff) — base do próximo redesign.
+> 📐 **Handoff de design:** `docs/handoff-v2/` (11 telas) e `docs/handoff-shot-live/`
+> (tela 02 redesenhada) no repo de trabalho — o `README.md` de cada pacote é a
+> especificação e os `.dc.html` abrem no navegador.
 
-## Instalação
+## Linhas de versão
 
-Decaid → **Skins → Install from GitHub branch** → `thiraraujo/decaid-skin-crema`, branch `main`.
-As atualizações chegam por *Check for updates* (ETag) — não é preciso release nem PR.
+| Branch | O que é |
+|---|---|
+| `main` | **a v2** — é o que a máquina instala |
+| `v2` | espelho da `main`, mantido para histórico do redesign |
+| `v1` · tag `v0.2.2` | congelamento da versão anterior ao redesign |
 
-## Stack
+Decaid → **Skins → Install from GitHub branch** → `thiraraujo/decaid-skin-crema`,
+branch `main`. As atualizações chegam por *Check for updates* (ETag).
 
-- **JS vanilla, ES modules, sem build** — servido como arquivos estáticos.
-- **CSS puro com design tokens** (`css/tokens.css`).
-- **Gráfico SVG desenhado à mão** (`src/chart.js`) — ao vivo por `requestAnimationFrame`,
-  estático (perfil planejado / shot gravado) por render síncrono.
-- **Fontes locais** (offline/kiosk): Hanken Grotesk + IBM Plex Mono.
-- **Canvas fixo 1320×800** escalado por `transform` (`fitApp` em `main.js`) — independe de dpr.
+Backup local da v1 publicada: `ipad/backups/` (zip + pasta extraída do commit
+que estava na `main`).
+
+## Telas
+
+| # | Tela | Onde mora |
+|---|---|---|
+| 01 | Home (idle) | `index.html` + `src/ui.js` |
+| 02 | Shot ao vivo | `src/live.js` (`#live` + gráfico próprio) |
+| 03 | Adjustments (flush / água / vapor) | `src/screens.js` |
+| 04 | Teclado numérico | `src/numpad.js` |
+| 05/06 | Coffee & Grinder (selecionar / criar) | `src/screens.js` |
+| 07/08 | Shot history (+ filtro por café) | `src/history.js` |
+| 09 | Coffee history (busca) | `src/history.js` |
+| 10 | Edit shot | `src/history.js` |
+| 11 | Estados da máquina (pílula) | `.state-pill` em `css/main.css` |
+| — | Perfis (favoritos, categorias, busca) | `src/profiles.js` |
+
+**Tela de Perfis** (`✎ perfis` no topo da home) em `src/profiles.js`: favoritos à esquerda
+(reordenar e remover), filtros por categoria, lista de **todos** os perfis da máquina
+(73 no Bridge de teste) com busca, e prévia com a curva planejada, as notas do perfil e
+duas ações — ★ favoritar e ☕ usar agora (entra no carrossel e vai para a máquina).
+
+As categorias saem do próprio título, que o Decaid escreve como `Categoria/Nome`
+(`Pour over basket/V60 22g in, 375g out`, `D-Flow / default`).
+
+Dose, Drink e Brew usam presets em botão redondo (18/20/22 g · 36/40/45 g · 88/92/95 °C);
+o toque no número abre o teclado para valores fora da lista. O Grind mantém a régua.
+
+A tela 02 mostra um bloco por fase do perfil conforme o shot avança (Yield / Temp /
+Pressure / Flow por fase). As fases vêm dos steps do perfil; a fase corrente, de
+`profileFrame` no snapshot — sem esse campo, dos tempos planejados.
+
+No histórico, **Apply** copia café, moedor, moagem, dose e drink do shot para a tela
+principal (e para o workflow da máquina); **Edit** corrige os dados daquele shot.
 
 ## Estrutura
 
 ```
-index.html          canvas fixo + markup estático (tela principal + 6 modais)
+index.html          canvas fixo 1320×800 + markup da home
 manifest.json       id/name/version/author/repository/entry (lido pelo Decaid)
-css/                tokens.css · main.css · modals.css
+css/                tokens.css · main.css (home) · screens.css (gráfico, telas, modais)
 src/
-  main.js           bootstrap: escolhe a fonte (Bridge real vs mock) e liga gráfico/status
+  main.js           bootstrap: escolhe Bridge real vs mock e liga estado → telas
   api.js            cliente REST + WebSocket do ReaPrime + detecção de host
-  mock.js           fonte simulada — SÓ quando não há Bridge (dev visual)
-  chart.js          gráfico herói (séries P/F/T/W + alvos, eixos, rótulos sobre a linha)
-  ui.js             toda a interação (modais, steppers, histórico por café, editor de shot)
-  profiles.js       perfis/favoritos de fallback
-  store.js          estado + pub/sub
+  mock.js           fonte simulada — só sem Bridge, ou com `?mock=1`
+  chart.js          gráfico (plan / shot / live) + miniChart()
+  store.js          estado (recipe · profiles · machine · aux · history)
+  ui.js             home: receita, réguas, carrossel, rodapé, shot ao vivo
+  numpad.js         teclado numérico reutilizável
+  screens.js        Adjustments · Coffee & Grinder · favoritos
+  history.js        histórico, busca por café e edição de shot
   host.js           ações do app host (sleep, Settings nativo)
-assets/fonts/       *.woff2
+assets/fonts/       Hanken Grotesk + IBM Plex Mono (offline/kiosk)
 ```
 
 ## Integração com o Bridge (ReaPrime, porta 8080)
 
-Detecção de host em `src/api.js`: `window.__REA_HOST__` → `localStorage.reaHostname` →
-`localhost:8080`. Sem host, a UI cai no `mock.js` (rodável no navegador, sem hardware).
+Detecção de host em `src/api.js`: `window.REA_HOST` → `localStorage.reaHostname` →
+`localhost:8080`. Sem host, cai no `mock.js`.
 
 | Canal | Uso |
 |---|---|
-| WS `/ws/v1/machine/snapshot` | gráfico ao vivo, Mix/Group, estado da máquina (badge + botão) |
-| WS `/ws/v1/scale/snapshot` | peso, status da balança, série de peso |
+| WS `/ws/v1/machine/snapshot` | gráfico ao vivo, Mix/Group, estado da máquina |
+| WS `/ws/v1/scale/snapshot` | peso, fluxo gravimétrico e status da balança |
+| WS `/ws/v1/machine/waterLevels` | nível do tanque (mm) e limiar de recarga |
 | WS `/ws/v1/display` | wake-lock (tela sempre acesa) |
-| `GET /profiles` · `PUT /profiles/{id}/visibility` | barra de favoritos, picker, mostrar/ocultar |
-| `GET /shots` · `GET /shots/{id}` | card de histórico, histórico por café, curvas do shot |
-| `PUT /shots/{id}` | editar shot passado (só `annotations`) |
+| `GET /profiles` | carrossel de favoritos e curvas planejadas |
+| `GET /shots` · `GET /shots/{id}` | histórico e curvas do shot |
+| `PUT /shots/{id}` | editar shot passado (`annotations.extras`) |
 | `GET/POST /beans` · `/grinders` | biblioteca Café & Moedor |
-| `PUT /workflow` | dose, yield, café, moedor, moagem, flush, água, vapor e **perfil** |
-| `PUT /machine/state/{state}` | ESPRESSO / STOP / WAKE / SLEEP |
+| `PUT /workflow` | dose, drink, café, moedor, moagem, flush, água e vapor |
+| `PUT /machine/state/{state}` | STOP, Sleep e acordar (o shot é disparado pelo GHC) |
+| `GET /devices` · `PUT /devices/connect` · `GET /devices/scan` | botão CONNECT da balança |
+| `PUT /scale/tare` | botão TARE |
+| `GET /plugins` | descobre o plugin de Settings do app |
 
-**Regra de ouro:** com Bridge conectado a skin **nunca** usa mock. Sem dado real, mostra `—`.
+A pílula de estado lê `state.state` do snapshot e mapeia o enum `MachineState`:
+`idle` e os estados de trabalho → **READY** (verde), `heating`/`booting`/`preheating` →
+**HEATING** (âmbar), `sleeping`/`error`/`needsWater`/sem conexão → vermelho (com o texto
+próprio de cada um).
 
-**Botão de máquina:** aparece só quando `GET /machine/info` reporta `GHC: false`. Em máquinas com
-botão físico (GHC) a skin esconde o botão da tela.
+**Regra de ouro:** com Bridge conectado a skin **nunca** usa mock. Sem dado real,
+mostra `—`.
+
+Ao abrir, a skin **lê** `GET /workflow` e monta a receita a partir do que já está
+carregado na máquina (café, moedor, moagem, dose, drink, flush, água, vapor e
+perfil) — só depois passa a escrever. Os PUTs são deep-merge do lado do servidor,
+então enviar `hotWaterData: {volume}` preserva `duration` e `flow`.
+
+**Duas specs, não uma.** O REST está em `assets/api/rest_v1.yml` e os WebSockets em
+`assets/api/websocket_v1.yml` (AsyncAPI) — canais e payloads de telemetria só existem
+na segunda. Ler as duas antes de supor qualquer coisa.
+
+- **Tanque.** O nível vem por `ws/v1/machine/waterLevels`, em **milímetros**
+  (`currentLevel` + `refillLevel`), não por REST. A skin mostra `NNmm` e acende o
+  aviso quando `currentLevel <= refillLevel`, igual ao app oficial — a conversão
+  mm→ml depende da geometria do tanque e não é informada em lugar nenhum.
+- **Balança.** `ws/v1/scale/snapshot` emite **dois** tipos de frame no mesmo socket:
+  `{status}` (só ao abrir e a cada mudança de conexão) e `{weight, weightFlow,
+  battery, timerValue}` (só enquanto conectada). Tratar os dois como um zera o peso
+  a cada frame de status. O socket fica aberto entre conexões — não reconectar.
+- **A escala do moedor não é informada.** `Grinder` só tem `settingType`
+  (`numeric` | `preset`), sem mínimo/máximo. A faixa do Grind assume 0–100 e
+  `fieldFor()` a alarga quando a máquina reporta um valor maior.
+- **Brew não existe no workflow.** A temperatura mora no perfil, por step: mudar
+  o Brew clona o perfil ativo e desloca todos os steps pelo delta.
+
+**GHC dispara o shot** — não há botão ESPRESSO na tela; durante a extração só `STOP`
+é interativo.
 
 ## Desenvolvimento
 
-O projeto vive numa pasta do iCloud, cujo sandbox bloqueia `python3 -m http.server` a partir dela.
-Sirva uma cópia (ou use `--directory`):
+A pasta vive no iCloud, cujo sandbox impede o servidor de preview de ler os arquivos.
+`tools/devsync.sh` espelha a skin em `~/.cache/crema-dev/v2`, de onde `.devserver.py`
+serve:
 
 ```bash
-python3 -m http.server 4173 --directory ipad/crema
+tools/devsync.sh v2 && python3 .devserver.py 4173 ~/.cache/crema-dev/v2
 ```
 
-Com o Decaid rodando, o Bridge responde em `localhost:8080` e a skin conecta sozinha.
-Emule **1320×800** para conferir a fidelidade.
+Emule **1320×800**. Sem hardware, use `http://localhost:4173/?mock=1` (fonte simulada;
+`__crema.simShot()` no console dispara um shot). Com o Decaid rodando, a skin conecta
+sozinha no Bridge — e aí o `?mock=1` é o único jeito de mexer na UI sem escrever na máquina.
 
 ## Publicação
 
-`rsync` do conteúdo desta pasta para o clone do repositório, commit e **force-push na `main`**.
-Até a v1: sempre sobrescrever, sem PR e sem release. Na v1 o histórico será refeito do zero.
-
 ```bash
+tools/publish.sh "mensagem do commit"          # espelha crema-v2/ na branch v2
 curl -X POST http://localhost:8080/api/v1/webui/skins/update   # força o check na máquina
 ```
-
-## Status
-
-Funcionando e verificado no Bridge real: telemetria ao vivo, perfis (incl. ocultos), histórico de
-shots com curvas, **histórico por café + apply**, biblioteca de cafés/moedores com cadastro,
-**editor de shot**, badges completos de estado, dim/lock no shot, iniciar/parar espresso.
-
-Pendências mapeadas no handoff: Visualizer (precisa login da conta Decent), fases reais no gráfico,
-Tank via WS, auto-reconexão da balança, ações de vapor/água/flush pela tela.
-</content>

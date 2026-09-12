@@ -1,407 +1,248 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-  <title>CREMA</title>
-  <link rel="stylesheet" href="css/tokens.css" />
-  <link rel="stylesheet" href="css/main.css" />
-  <link rel="stylesheet" href="css/modals.css" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CREMA</title>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/screens.css">
 </head>
 <body>
-  <div class="app">
 
-    <!-- ============ HEADER ============ -->
-    <header class="header">
-      <div class="header-left">
-        <div class="profiles" id="profiles"></div>
-        <div class="profile-more" data-action="browse-profiles" role="button" aria-label="All profiles" title="All profiles">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+<!-- ícones reutilizáveis (referenciados por <use>) -->
+<svg class="svg-defs" aria-hidden="true">
+  <defs>
+    <g id="ic-cup"><path d="M4 8h11v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z"/><path d="M15 9h2a2.5 2.5 0 0 1 0 5h-2"/><path d="M3 21h14"/></g>
+    <g id="ic-cup-steam"><path d="M4 8h11v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z"/><path d="M15 9h2a2.5 2.5 0 0 1 0 5h-2"/><path d="M3 21h14"/><path d="M7 5.5q1-1.2 2-.2t2-.2"/></g>
+    <g id="ic-cup-off"><path d="M4 8h11v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z"/><path d="M15 9h2a2.5 2.5 0 0 1 0 5h-2"/><path d="M3 21h14"/><path d="M3 3 21 21"/></g>
+    <g id="ic-drop"><path d="M10 2C10 2 4.5 8.5 4.5 11.5a5.5 5.5 0 0 0 11 0C15.5 8.5 10 2 10 2Z"/></g>
+    <g id="ic-waves"><path d="M2.5 18.5q2-1.6 4 0t4 0t4 0t3 0"/></g>
+    <g id="ic-flush"><path d="M4 7h12M10 2v5M6.5 7v2M13.5 7v2"/><path d="M6 12v3M10 12v5M14 12v3"/></g>
+    <g id="ic-star-off"><path d="M10 2.5 12.3 7.2 17.5 8 13.7 11.6 14.6 16.8 10 14.3 5.4 16.8 6.3 11.6 2.5 8 7.7 7.2Z"/><path d="M3 3 17 17"/></g>
+    <g id="ic-search"><circle cx="9" cy="9" r="6"/><path d="m13.5 13.5 4.5 4.5"/></g>
+    <g id="ic-pencil"><path d="M13.5 2.5a2.1 2.1 0 0 1 3 3L7 15l-4 1 1-4 9.5-9.5Z"/></g>
+    <g id="ic-moon"><path d="M16.5 12.5A7 7 0 0 1 7.5 3.5a7.5 7.5 0 1 0 9 9Z"/></g>
+    <g id="ic-keyboard"><rect x="1.5" y="5" width="17" height="10" rx="2"/><path d="M4.5 8h1M7.5 8h1M10.5 8h1M13.5 8h1M4.5 11.5h11"/></g>
+    <g id="ic-gear"><circle cx="10" cy="10" r="3"/><path d="M10 1.5v2.2M10 16.3v2.2M18.5 10h-2.2M3.7 10H1.5M16 4l-1.6 1.6M5.6 14.4 4 16M16 16l-1.6-1.6M5.6 5.6 4 4"/></g>
+  </defs>
+</svg>
+
+<div class="app">
+
+  <!-- ======================= HOME (01) / SHOT AO VIVO (02) ======================= -->
+  <main class="home" id="home">
+
+
+    <!-- ---------- coluna da receita (300px) ---------- -->
+    <aside class="rail" id="rail">
+
+      <div class="row rail__full">
+        <span class="lb">Coffee</span>
+        <span class="chip chip--sm" id="coffee-process">—</span>
+      </div>
+
+      <button class="rail__coffee tap" id="coffee-name-btn" type="button">
+        <span class="rail__coffee-name" id="coffee-name">—</span>
+        <span class="rail__coffee-brand" id="coffee-brand">—</span>
+      </button>
+
+      <button class="row rail__full rail__sep tap" id="grinder-btn" type="button">
+        <span class="lb">Grinder</span>
+        <span class="rail__grinder" id="grinder-name">—<span class="rail__caret">⌄</span></span>
+      </button>
+
+      <div class="rail__full rail__sep">
+        <div class="row"><span class="lb">Grind</span></div>
+        <button class="mono rail__grind tap" id="grind-value" type="button">—</button>
+        <div class="ruler" id="grind-ruler" data-field="grind" style="width:300px"><b></b><i></i></div>
+      </div>
+
+      <div class="rail__ratio">
+        <div class="lb lb--blue">Ratio</div>
+        <div class="mono rail__ratio-value" id="ratio-value">1<span class="colon">:</span>0.0</div>
+        <div class="rail__ratio-cols">
+          <div class="rail__col">
+            <div class="lb">Dose</div>
+            <button class="mono rail__col-value tap" id="dose-value" type="button">—<span class="u">g</span></button>
+            <div class="rail__col-chips" id="dose-chips"></div>
+          </div>
+          <div class="rail__col">
+            <div class="lb">Drink</div>
+            <button class="mono rail__col-value rail__col-value--amber tap" id="drink-value" type="button">—<span class="u">g</span></button>
+            <div class="rail__col-chips" id="drink-chips"></div>
+          </div>
         </div>
       </div>
-      <div class="header-actions">
-        <div class="pill-btn machine-btn" id="machine-btn" data-action="machine-action">
-          <span class="icon" id="mb-icon" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          </span>
-          <span id="mb-label">ESPRESSO</span>
+
+      <div class="row rail__full rail__brew">
+        <span class="lb">Brew</span>
+        <button class="mono rail__brew-value tap" id="brew-value" type="button">—<span class="u">°C</span></button>
+        <div class="rail__brew-chips" id="brew-chips">
+          <button class="chip chip--round" data-temp="88" type="button">88</button>
+          <button class="chip chip--round" data-temp="92" type="button">92</button>
+          <button class="chip chip--round" data-temp="95" type="button">95</button>
         </div>
-        <div class="pill-btn" data-action="sleep">
-          <span class="icon" aria-hidden="true">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
-          </span>
-          SLEEP
+      </div>
+
+      <button class="rail__machine tap" id="machine-group" type="button">
+        <div class="rail__aux">
+          <div class="rail__aux-item">
+            <svg class="ic" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="1.6" stroke-linecap="round">
+              <use href="#ic-drop" stroke="var(--red)"/><use href="#ic-waves" stroke="var(--label)"/>
+            </svg>
+            <div class="lb lb--xs">Hot water</div>
+            <div class="mono rail__aux-value" id="aux-water">—</div>
+          </div>
+          <div class="rail__aux-item">
+            <div class="rail__aux-glyph">♨</div>
+            <div class="lb lb--xs">Steam</div>
+            <div class="mono rail__aux-value" id="aux-steam">—</div>
+          </div>
+          <div class="rail__aux-item">
+            <svg class="ic" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke-width="1.6" stroke-linecap="round">
+              <path d="M4 7h12M10 2v5M6.5 7v2M13.5 7v2" stroke="var(--text-2)"/>
+              <path d="M6 12v3M10 12v5M14 12v3" stroke="var(--blue)"/>
+            </svg>
+            <div class="lb lb--xs">Flush</div>
+            <div class="mono rail__aux-value" id="aux-flush">—</div>
+          </div>
         </div>
-        <div class="pill-btn" data-action="open-settings">
-          <span class="icon" aria-hidden="true">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
-          </span>
-          SETTINGS
+        <div class="row rail__temps">
+          <span class="lb lb--xs">Mix <span class="mono rail__temp" id="mix-value">—</span> °c</span>
+          <span class="lb lb--xs">Group <span class="mono rail__temp" id="group-value">—</span> °c</span>
         </div>
+      </button>
+
+    </aside>
+
+    <!-- ---------- conteúdo ---------- -->
+    <section class="content">
+
+      <div class="row topbar" id="topbar">
+        <button class="topbar__favs tap" id="edit-favorites" type="button">
+          <svg class="ic" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-pencil"/></svg>
+          perfis
+        </button>
+        <div class="topbar__right">
+          <div class="state-pill state-pill--disconnected" id="state-pill">
+            <svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="state-icon"><use href="#ic-cup-off"/></svg>
+            <span id="state-label">Disconnected</span>
+          </div>
+          <button class="pill tap" id="btn-sleep" type="button">
+            <svg class="ic ic--blue" width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-moon"/></svg>
+            SLEEP
+          </button>
+          <button class="pill tap" id="btn-settings" type="button">
+            <svg class="ic ic--blue" width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-gear"/></svg>
+            SETTINGS
+          </button>
+        </div>
+      </div>
+
+      <div class="carousel" id="carousel"></div>
+
+      <div class="card chart-card" id="chart-card">
+        <div class="row chart-card__head">
+          <div></div>
+          <div class="chart-card__tools">
+            <div class="legend" id="chart-legend">
+              <span><i style="background:var(--blue)"></i>Flow</span>
+              <span><i style="background:var(--green)"></i>Pressure</span>
+              <span><i style="background:var(--red)"></i>Temp</span>
+            </div>
+            <span class="toggle-label">Static</span>
+            <button class="toggle is-on" id="static-toggle" type="button" role="switch" aria-checked="true"><i></i></button>
+          </div>
+        </div>
+        <div class="chart-card__plot" id="chart-host"></div>
+      </div>
+
+      <div class="home__bottom" id="home-bottom">
+        <div class="card lastshot" id="lastshot">
+          <button class="stepper tap" id="shot-prev" type="button">‹</button>
+          <button class="lastshot__body tap" id="lastshot-body" type="button">
+            <div class="lastshot__title">
+              <span id="lastshot-profile">—</span>
+              <span class="lastshot__coffee" id="lastshot-coffee"></span>
+            </div>
+            <div class="mono lastshot__meta" id="lastshot-meta">—</div>
+          </button>
+          <svg class="lastshot__mini" id="lastshot-mini" viewBox="0 0 300 70" preserveAspectRatio="none"></svg>
+          <button class="stepper tap" id="shot-next" type="button">›</button>
+        </div>
+        <div class="card scale-card">
+          <div class="row">
+            <span class="lb">Scale · Weight</span>
+            <span class="mono scale-card__value" id="scale-weight">0.0<span class="u"> g</span></span>
+          </div>
+          <div class="row">
+            <span class="scale-card__status" id="scale-status">Disconnected</span>
+            <button class="pill pill--sm pill--blue tap" id="scale-connect" type="button">CONNECT</button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ---------- tanque ---------- -->
+    <div class="tank" id="tank">
+      <div class="lb lb--xs">Tank</div>
+      <div class="tank__track">
+        <div class="tank__tube"><div class="tank__fill" id="tank-fill"></div></div>
+        <div class="mono tank__pct" id="tank-pct">—</div>
+      </div>
+      <div class="mono tank__ml" id="tank-ml">—<span class="u"> ml</span></div>
+    </div>
+
+  </main>
+
+  <!-- máquina dormindo: a skin fica apagada e qualquer toque acorda -->
+  <button class="sleep-veil" id="sleep-veil" type="button" hidden>
+    <svg class="ic sleep-veil__icon" width="64" height="64" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-moon"/></svg>
+    <span class="sleep-veil__title">Dormindo</span>
+    <span class="sleep-veil__hint">Toque para acordar</span>
+  </button>
+
+  <!-- ======================= 02 · SHOT AO VIVO ======================= -->
+  <section class="live" id="live" hidden>
+
+    <header class="row live__head">
+      <div class="live__recipe">
+        <div class="live__field"><div class="lb">Profile</div><div class="live__v" id="lv-profile">—</div></div>
+        <div class="live__sep"></div>
+        <div class="live__field"><div class="lb">Coffee</div><div class="live__v" id="lv-coffee">—</div></div>
+        <div class="live__sep"></div>
+        <div class="live__field"><div class="lb">Grinder</div><div class="live__v" id="lv-grinder">—</div></div>
+        <div class="live__sep"></div>
+        <div class="live__field"><div class="lb">Dose → Drink</div><div class="mo live__v live__v--mono" id="lv-dose">—</div></div>
+        <div class="live__field"><div class="lb lb--blue">Ratio</div><div class="mo live__v live__v--mono live__v--blue" id="lv-ratio">—</div></div>
+        <div class="live__field"><div class="lb">Brew</div><div class="mo live__v live__v--mono live__v--red" id="lv-brew">—</div></div>
+      </div>
+      <div class="live__right">
+        <div class="mo live__timer"><span id="lv-timer">0.0</span><span class="u">s</span></div>
+        <button class="btn-stop" id="btn-stop" type="button" data-mode="stop"><span class="btn-stop__sq"></span><span id="btn-stop-label">STOP</span></button>
       </div>
     </header>
 
-    <!-- ============ BODY ============ -->
-    <div class="body">
-
-      <!-- ---- LEFT RAIL ---- -->
-      <aside class="rail">
-        <div class="tappable" data-action="open-coffee">
-          <div class="row-between">
-            <div class="label">Coffee</div>
-            <div class="chip-tag">Washed</div>
-          </div>
-          <div class="coffee-name">Scopius</div>
-          <div class="coffee-sub">Midnight Coffee</div>
-        </div>
-        <div class="divider"></div>
-
-        <div class="row-between tappable" data-action="open-coffee">
-          <div class="label">Grinder</div>
-          <div class="grinder-val">EK43S
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
-          </div>
-        </div>
-        <div class="stepper">
-          <div class="step-btn lg" data-step="grinder-" >−</div>
-          <div class="grinder-value num-input" id="grinder-value" data-action="open-numpad" data-field="grinder">0.00</div>
-          <div class="step-btn lg" data-step="grinder+">+</div>
-        </div>
-        <div class="divider"></div>
-
-        <div class="row-between">
-          <div class="label">Ratio</div>
-          <div class="ratio-val" id="ratio-value">1:0</div>
-        </div>
-        <div class="divider"></div>
-
-        <div class="controls-label">Controls</div>
-
-        <!-- Dose -->
-        <div class="ctrl-row">
-          <div class="ctrl-name">Dose</div>
-          <div class="ctrl-stepper">
-            <div class="step-btn md" data-step="dose-">−</div>
-            <div class="ctrl-value num-input" id="dose-value" data-action="open-numpad" data-field="dose">15.0<span class="unit">g</span></div>
-            <div class="step-btn md" data-step="dose+">+</div>
-          </div>
-        </div>
-        <div class="preset-row" data-preset-group="dose">
-          <div class="preset" data-preset="16">16g</div><div class="preset" data-preset="18">18g</div><div class="preset" data-preset="20">20g</div>
-        </div>
-
-        <!-- Drink -->
-        <div class="ctrl-row">
-          <div class="ctrl-name">Drink</div>
-          <div class="ctrl-stepper">
-            <div class="step-btn md" data-step="drink-">−</div>
-            <div class="ctrl-value num-input" id="drink-value" data-action="open-numpad" data-field="drink">0<span class="unit">g</span></div>
-            <div class="step-btn md" data-step="drink+">+</div>
-          </div>
-        </div>
-        <div class="preset-row" data-preset-group="drink">
-          <div class="preset" data-preset="36">36g</div><div class="preset" data-preset="40">40g</div><div class="preset" data-preset="45">45g</div>
-        </div>
-
-        <!-- Brew -->
-        <div class="ctrl-row">
-          <div class="ctrl-name">Brew</div>
-          <div class="ctrl-stepper">
-            <div class="step-btn md" data-step="brew-">−</div>
-            <div class="ctrl-value num-input" id="brew-value" data-action="open-numpad" data-field="brew">89<span class="unit">°</span></div>
-            <div class="step-btn md" data-step="brew+">+</div>
-          </div>
-        </div>
-        <div class="preset-row" data-preset-group="brew">
-          <div class="preset" data-preset="88">88°</div><div class="preset" data-preset="92">92°</div><div class="preset" data-preset="95">95°</div>
-        </div>
-
-        <div class="divider" style="margin:6px 0 16px"></div>
-        <div class="rail-link" data-action="open-adjust">
-          <div class="ctrl-name">Flush</div><div class="val"><span id="flush-rail">5s</span>&nbsp;&nbsp;›</div>
-        </div>
-        <div class="rail-link" data-action="open-adjust">
-          <div class="ctrl-name">Hot Water</div><div class="val"><span id="hotwater-rail">50ml · 85°</span>&nbsp;&nbsp;›</div>
-        </div>
-        <div class="rail-link" data-action="open-adjust">
-          <div class="ctrl-name">Steam</div><div class="val"><span id="steam-rail">Off</span>&nbsp;&nbsp;›</div>
-        </div>
-      </aside>
-
-      <!-- ---- RIGHT ---- -->
-      <main class="right">
-        <div class="content-head">
-          <div class="title" id="content-title"><span class="title-name">Default</span> <span class="sub">Espresso</span></div>
-          <div class="head-right">
-            <div class="shot-phase" id="shot-phase" hidden>
-              <span class="sp-step" id="sp-step">1: Fill</span>
-              <span class="sp-sep">|</span>
-              <span class="sp-time" id="sp-time">0s</span>
-              <span class="sp-ff" aria-hidden="true">
-                <svg width="18" height="12" viewBox="0 0 24 16" fill="currentColor"><path d="M2 2l6 6-6 6z M12 2l6 6-6 6z"/></svg>
-              </span>
-            </div>
-            <div class="status-badges">
-              <div class="badge" id="badge-ready"><span class="dot"></span>Ready</div>
-              <div class="badge" id="badge-conn"><span class="dot"></span>Connected</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- STAT STRIP (linha única, fina) -->
-        <div class="stat-strip">
-          <!-- temperaturas lado a lado -->
-          <div class="stat stat-temps">
-            <div class="stat-inline"><span class="stat-label">Mix</span><span class="stat-value" id="mix-value">94.2<span class="unit"> °c</span></span></div>
-            <div class="stat-inline"><span class="stat-label">Group</span><span class="stat-value" id="group-value">106.5<span class="unit"> °c</span></span></div>
-          </div>
-          <div class="stat-sep"></div>
-          <!-- tank: rótulo + ml + barra inline + % -->
-          <div class="stat stat-tank">
-            <span class="stat-label">Tank</span>
-            <span class="stat-value" id="tank-value">537<span class="unit"> ml</span></span>
-            <span class="tank-bar"><span class="tank-fill" id="tank-fill" style="width:36%"></span></span>
-            <span class="stat-pct" id="tank-pct">36%</span>
-          </div>
-          <div class="stat-sep"></div>
-          <!-- weight inline -->
-          <div class="stat stat-weight">
-            <span class="stat-label">Weight</span>
-            <span class="stat-value" id="weight-value">0.0<span class="unit"> g</span></span>
-            <span class="stat-disc" id="weight-status">Disconnected</span>
-            <span class="scale-btn" id="scale-btn" data-action="scale-action">CONNECT</span>
-          </div>
-          <div class="stat-sep"></div>
-          <!-- static inline: toggle + stepper (mantém − +) -->
-          <div class="stat stat-static">
-            <span class="stat-label">Static</span>
-            <div class="toggle" id="static-toggle" data-toggle="static"><div class="knob"></div></div>
-            <div class="static-stepper" id="static-stepper">
-              <div class="step-btn sm" data-step="static-">−</div>
-              <div class="static-val" id="static-value">30 sec</div>
-              <div class="step-btn sm" data-step="static+">+</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- GRAPH HERO -->
-        <div class="graph">
-          <div class="graph-plot">
-            <svg viewBox="0 0 1000 560" preserveAspectRatio="none">
-              <line x1="0" y1="420" x2="1000" y2="420" stroke="var(--grid-line)" stroke-width="1" vector-effect="non-scaling-stroke"></line>
-              <line x1="0" y1="280" x2="1000" y2="280" stroke="var(--grid-line)" stroke-width="1" vector-effect="non-scaling-stroke"></line>
-              <line x1="0" y1="140" x2="1000" y2="140" stroke="var(--grid-line)" stroke-width="1" vector-effect="non-scaling-stroke"></line>
-              <line x1="0" y1="560" x2="1000" y2="560" stroke="var(--grid-base)" stroke-width="1" vector-effect="non-scaling-stroke"></line>
-              <g id="phase-lines"></g>
-              <polyline id="s-temp"        fill="none" stroke="var(--red)"   stroke-width="2"   vector-effect="non-scaling-stroke"></polyline>
-              <polyline id="s-press-target" fill="none" stroke="var(--green)" stroke-width="2" stroke-dasharray="6 7" opacity="0.5" vector-effect="non-scaling-stroke"></polyline>
-              <polyline id="s-flow-target"  fill="none" stroke="var(--blue)"  stroke-width="2" stroke-dasharray="6 7" opacity="0.4" vector-effect="non-scaling-stroke"></polyline>
-              <polyline id="s-press" fill="none" stroke="var(--green)" stroke-width="3" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline>
-              <polyline id="s-flow"  fill="none" stroke="var(--blue)"  stroke-width="3" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline>
-              <polyline id="s-weight" fill="none" stroke="var(--amber)" stroke-width="2.5" vector-effect="non-scaling-stroke"></polyline>
-            </svg>
-          </div>
-          <div class="axis-y"><div>12</div><div>9</div><div>6</div><div>3</div><div>0</div></div>
-          <div class="axis-y-right"><div class="unit-c">°C</div><div>100</div><div>80</div><div>60</div><div>40</div><div>20</div><div>0</div></div>
-          <div class="phase-labels" id="phase-labels"></div>
-          <div class="val-label val-temp"   id="lbl-temp">88 °C</div>
-          <div class="val-label val-press"  id="lbl-press">8.5 Pressure</div>
-          <div class="val-label val-flow"   id="lbl-flow">1.9 Flow</div>
-          <div class="val-label val-weight" id="lbl-weight">0.0 Weight</div>
-          <div class="axis-x" id="axis-x"><div>0s</div><div>8s</div><div>15s</div><div>23s</div><div>30s</div></div>
-        </div>
-
-        <!-- SHOT HISTORY (log + tabela do shot) -->
-        <div class="history">
-          <!-- esquerda: card do último shot com navegação ‹ › -->
-          <div class="shot-log">
-            <div id="shot-card"></div>
-          </div>
-          <!-- direita: infos do shot (comprimida) -->
-          <div class="shot-table">
-            <div class="st-grid st-head">
-              <div></div><div>Time</div><div>Grams</div><div>mL</div><div>°C</div>
-              <div class="c-blue">mL/s</div><div class="c-green">Pressure</div>
-            </div>
-            <div id="shot-table-rows">
-              <div class="st-grid st-row">
-                <div class="name">Preinfusion</div><div>0s</div><div>0.0</div><div>0</div><div>—</div>
-                <div class="c-blue">—</div><div class="c-green">—</div>
-              </div>
-              <div class="st-grid st-row st-total">
-                <div class="name">Total</div><div>0s</div><div>0.0</div><div>0</div><div></div><div></div><div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
-
-    <!-- ============ COFFEE & GRINDER MODAL ============ -->
-    <div class="overlay coffee" id="modal-coffee" data-close-overlay hidden>
-      <div class="modal coffee">
-        <div class="modal-head">
-          <div>
-            <div class="modal-title">Coffee &amp; Grinder</div>
-            <div class="modal-subtitle">Tap a recent one to apply the pairing, or add a new one.</div>
-          </div>
-          <div class="btn-done corner" data-action="close-modal">Done</div>
-        </div>
-        <div class="modal-cols">
-          <div class="modal-col">
-            <div class="col-head">
-              <div class="col-label">Coffee · Recentes</div>
-              <div class="btn-new" data-action="lib-new-coffee">+ New</div>
-            </div>
-            <div id="coffee-cards"></div>
-          </div>
-          <div class="modal-col">
-            <div class="col-head">
-              <div class="col-label">Grinder · Recentes</div>
-              <div class="btn-new" data-action="lib-new-grinder">+ New</div>
-            </div>
-            <div id="grinder-cards"></div>
-          </div>
-        </div>
+    <div class="row live__legend">
+      <span class="lb lb--xs">bar / ml·s</span>
+      <div class="live__legend-items">
+        <span><i style="background:var(--blue)"></i>Flow <i class="dash" style="border-color:var(--blue)"></i></span>
+        <span><i style="background:var(--green)"></i>Pressure <i class="dash" style="border-color:var(--green)"></i></span>
+        <span><i style="background:var(--red)"></i>Temperature</span>
+        <span><i style="background:var(--amber)"></i>Weight</span>
       </div>
     </div>
 
-    <!-- ============ ADJUSTMENTS MODAL ============ -->
-    <div class="overlay adjust" id="modal-adjust" data-close-overlay hidden>
-      <div class="modal adjust">
-        <div class="modal-head">
-          <div class="modal-title">Adjustments</div>
-          <div class="modal-close" data-action="close-modal">×</div>
-        </div>
-        <div class="section-label">Flush</div>
-        <div class="chip-row mb-26" data-chipgroup="flush">
-          <div class="big-chip selected" data-value="5">5s</div><div class="big-chip" data-value="10">10s</div>
-          <div class="big-chip" data-value="15">15s</div><div class="big-chip" data-value="20">20s</div>
-        </div>
-        <div class="section-label">Hot Water</div>
-        <div class="sub-label">Volume</div>
-        <div class="chip-row mb-20" data-chipgroup="hw-volume">
-          <div class="big-chip" data-value="10">10ml</div><div class="big-chip" data-value="20">20ml</div>
-          <div class="big-chip selected" data-value="50">50ml</div><div class="big-chip" data-value="100">100ml</div>
-        </div>
-        <div class="sub-label">Temp</div>
-        <div class="chip-row mb-26" data-chipgroup="hw-temp">
-          <div class="big-chip" data-value="80">80°</div><div class="big-chip selected" data-value="85">85°</div>
-          <div class="big-chip" data-value="90">90°</div><div class="big-chip" data-value="95">95°</div>
-        </div>
-        <div class="steam-row">
-          <div class="section-label" style="margin-bottom:0">Steam</div>
-          <div class="steam-toggle-wrap">
-            <span class="steam-state" id="steam-state">OFF</span>
-            <div class="toggle lg off" id="steam-toggle" data-toggle="steam"><div class="knob"></div></div>
-          </div>
-        </div>
-        <div id="steam-options" hidden>
-          <div class="sub-label">Time</div>
-          <div class="chip-row mb-20" data-chipgroup="steam-time">
-            <div class="big-chip" data-value="25">25s</div><div class="big-chip" data-value="30">30s</div>
-            <div class="big-chip selected" data-value="40">40s</div><div class="big-chip" data-value="45">45s</div>
-          </div>
-          <div class="sub-label">Flow</div>
-          <div class="chip-row mb-26" data-chipgroup="steam-flow">
-            <div class="big-chip" data-value="0.4">0.4</div><div class="big-chip selected" data-value="0.5">0.5</div>
-            <div class="big-chip" data-value="0.6">0.6</div><div class="big-chip" data-value="0.8">0.8</div>
-          </div>
-        </div>
-        <div class="btn-done full" data-action="close-modal">Done</div>
-      </div>
-    </div>
+    <div class="live__plot" id="live-chart"></div>
 
-    <!-- ============ PROFILE PICKER MODAL ============ -->
-    <div class="overlay profiles" id="modal-profiles" data-close-overlay hidden>
-      <div class="modal profiles">
-        <div class="modal-head">
-          <div>
-            <div class="modal-title">Choose Profile</div>
-            <div class="modal-subtitle" id="profile-picker-sub">Choose the profile for this favorite.</div>
-          </div>
-          <div class="ph-actions">
-            <div class="ph-show-hidden" data-action="toggle-hidden" role="button">
-              <span class="ph-lbl">Show hidden</span>
-              <div class="toggle off" id="show-hidden-toggle"><div class="knob"></div></div>
-            </div>
-            <div class="btn-done corner" data-action="close-modal">Done</div>
-          </div>
-        </div>
-        <div class="profile-picker" id="profile-picker"></div>
-      </div>
-    </div>
+    <div class="live__phases" id="live-phases"></div>
 
-    <!-- ============ COFFEE HISTORY MODAL (busca por café) ============ -->
-    <div class="overlay profiles" id="modal-coffeehist" data-close-overlay hidden>
-      <div class="modal profiles">
-        <div class="modal-head">
-          <div>
-            <div class="modal-title" id="ch-title">Coffee history</div>
-            <div class="modal-subtitle" id="ch-sub">Pick a coffee to see its recent shots and apply the pairing.</div>
-          </div>
-          <div class="ph-actions">
-            <div class="btn-done corner ch-back" data-action="ch-back" hidden>‹ Back</div>
-            <div class="btn-done corner" data-action="close-modal">Done</div>
-          </div>
-        </div>
-        <div class="profile-picker" id="coffeehist-body"></div>
-      </div>
-    </div>
+  </section>
 
-    <!-- ============ EDIT SHOT MODAL (editar café/moedor/moagem de um shot) ============ -->
-    <div class="overlay editshot" id="modal-editshot" data-close-overlay hidden>
-      <div class="modal editshot">
-        <div class="modal-head">
-          <div>
-            <div class="modal-title">Edit shot</div>
-            <div class="modal-subtitle" id="es-sub"></div>
-          </div>
-          <div class="modal-close" data-action="close-modal">×</div>
-        </div>
-        <div id="editshot-body"></div>
-      </div>
-    </div>
+</div>
 
-    <!-- ============ NUMPAD MODAL (Grinder / Dose / Drink / Brew) ============ -->
-    <div class="overlay numpad" id="modal-numpad" data-close-overlay hidden>
-      <div class="modal numpad">
-        <div class="numpad-head">
-          <div class="numpad-title" id="numpad-title">DOSE</div>
-          <div class="numpad-actions">
-            <div class="numpad-cancel" data-action="numpad-cancel">CANCEL</div>
-            <div class="btn-done corner" data-action="numpad-confirm">CONFIRM</div>
-          </div>
-        </div>
-        <div class="numpad-body">
-          <div class="numpad-left">
-            <div class="numpad-hint" id="numpad-hint">Input a value between 5-30g</div>
-            <div class="numpad-display" id="numpad-display">15<span class="unit">g</span></div>
-            <div class="numpad-prev-label">Previous Values</div>
-            <div class="numpad-prev" id="numpad-prev"></div>
-          </div>
-          <div class="numpad-grid">
-            <div class="key" data-key="1">1</div>
-            <div class="key" data-key="2">2</div>
-            <div class="key" data-key="3">3</div>
-            <div class="key" data-key="4">4</div>
-            <div class="key" data-key="5">5</div>
-            <div class="key" data-key="6">6</div>
-            <div class="key" data-key="7">7</div>
-            <div class="key" data-key="8">8</div>
-            <div class="key" data-key="9">9</div>
-            <div class="key" data-key=".">.</div>
-            <div class="key" data-key="0">0</div>
-            <div class="key" data-key="back" aria-label="backspace">
-              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H8.5L3 12l5.5 7H21a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1Z"/><path d="M17 9l-4 6M13 9l4 6"/></svg>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <script type="module" src="src/main.js"></script>
+<script type="module" src="src/main.js"></script>
 </body>
 </html>
