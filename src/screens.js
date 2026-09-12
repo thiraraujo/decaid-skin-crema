@@ -5,6 +5,8 @@ import { state } from './store.js';
 import { openNumpad } from './numpad.js';
 import { pushWorkflow } from './workflow.js';
 import { THEMES, applyTheme, currentTheme } from './theme.js';
+import { STATIC_AXIS } from './store.js';
+import { setStaticSeconds } from './ui.js';
 
 let scrim = null;
 let source = null;
@@ -328,21 +330,38 @@ function buildThemes() {
   themesEl.hidden = true;
   themesEl.innerHTML = `
     <div class="modal__head">
-      <div>
-        <div class="modal__title">Colors</div>
-        <div class="modal__sub">Only the colors change — the layout stays the same.</div>
-      </div>
+      <div class="modal__title">Skin settings</div>
       <button class="btn-primary" id="th-done" type="button">Done</button>
     </div>
+    <div class="row skinset__axis">
+      <div>
+        <div class="hl">Live chart</div>
+        <div class="sub skinset__hint">With STATIC on, the time axis starts at this length and keeps growing if the shot runs longer.</div>
+      </div>
+      <div class="skinset__stepper">
+        <button class="stepper tap" id="th-axis-minus" type="button" aria-label="5 seconds less">−</button>
+        <span class="mono skinset__value" id="th-axis-value">—</span>
+        <button class="stepper tap" id="th-axis-plus" type="button" aria-label="5 seconds more">+</button>
+      </div>
+    </div>
+    <div class="hl skinset__colors">Colors <span class="sub skinset__colors-sub">Only the colors change — the layout stays the same.</span></div>
     <div class="themes__grid" id="th-grid"></div>`;
   app().appendChild(themesEl);
   themesEl.querySelector('#th-done').addEventListener('click', () => closeModal(themesEl));
+  themesEl.querySelector('#th-axis-minus').addEventListener('click', () => { setStaticSeconds(state.staticTimer - STATIC_AXIS.step); paintAxis(); });
+  themesEl.querySelector('#th-axis-plus').addEventListener('click', () => { setStaticSeconds(state.staticTimer + STATIC_AXIS.step); paintAxis(); });
   themesEl.querySelector('#th-grid').addEventListener('click', (e) => {
     const b = e.target.closest('[data-theme-id]');
     if (!b) return;
     applyTheme(b.dataset.themeId);   // aplica na hora: o próprio modal já mostra o tema
     paintThemes();
   });
+}
+
+function paintAxis() {
+  themesEl.querySelector('#th-axis-value').textContent = `${state.staticTimer}s`;
+  themesEl.querySelector('#th-axis-minus').disabled = state.staticTimer <= STATIC_AXIS.min;
+  themesEl.querySelector('#th-axis-plus').disabled = state.staticTimer >= STATIC_AXIS.max;
 }
 
 function paintThemes() {
@@ -369,6 +388,7 @@ function paintThemes() {
 
 export function openThemes() {
   if (!themesEl) buildThemes();
+  paintAxis();
   paintThemes();
   state.modal = 'themes';
   showModal(themesEl);

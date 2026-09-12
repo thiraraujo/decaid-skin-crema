@@ -29,7 +29,7 @@ export const state = {
   chartMode: 'lastShot',       // 'lastShot' | 'plan' | 'live'
   staticAxis: true,           // vem do app (prefs) no boot
   numpadPrevious: {},         // valores anteriores do teclado, por campo — vem do app
-  staticTimer: 30,
+  staticTimer: 40,            // STATIC ligado: eixo X do shot ao vivo começa em Y s (prefs do app)
 
   // shot ao vivo
   live: { running: false, t: 0, series: { pressure: [], flow: [], temp: [], weight: [] } },
@@ -100,6 +100,11 @@ export function fieldFor(name, value) {
   const min = v < f.min ? Math.floor(v) : f.min;
   return { ...f, min, max };
 }
+
+// tempo inicial do eixo X no shot ao vivo com STATIC ligado — ajuste de 5 em 5 s
+export const STATIC_AXIS = { default: 40, step: 5, min: 5, max: 1000 };
+export const clampStaticSeconds = (v) =>
+  Math.min(STATIC_AXIS.max, Math.max(STATIC_AXIS.min, Math.round(Number(v) || STATIC_AXIS.default)));
 
 export function subscribe(fn) {
   listeners.add(fn);
