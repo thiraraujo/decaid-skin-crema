@@ -216,7 +216,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 }
 
 /* ---------- carrossel de favoritos ---------- */
-.carousel { height: 126px; flex: none; position: relative; transition: opacity .2s ease-out; }
+.carousel { height: 126px; flex: none; position: relative; transition: opacity .2s ease-out; touch-action: none; }
 .carousel__card {
   position: absolute; top: 0; left: 50%; overflow: hidden;
   width: 440px; height: 126px; margin-left: -220px;
@@ -316,6 +316,17 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .tank.is-low .tank__pct { color: var(--amber); }
 .tank.is-critical .tank__fill { background: linear-gradient(180deg, #FF9C80, var(--red)); }
 .tank.is-critical .tank__pct { color: var(--red); }
+
+/* sem leitura de nível (Bridge real): tubo vazio, sem número fingido */
+.tank.is-unknown .tank__fill { display: none; }
+.tank.is-unknown .tank__pct { bottom: 50%; color: var(--label); background: none; }
+.tank.is-unknown .tank__ml { color: var(--label); }
+
+/* estado needsWater: a barra vira aviso de reabastecer */
+.tank.is-refill .tank__fill { background: linear-gradient(180deg, #FF9C80, var(--red)); }
+.tank.is-refill .tank__pct { color: var(--red); font-weight: 600; }
+.tank.is-refill .tank__ml { color: var(--red); font-size: 13px; }
+.tank.is-refill .tank__tube { box-shadow: 0 0 0 1px rgba(240,106,74,.45); }
 
 /* ======================= 02 · SHOT AO VIVO ======================= */
 .live-head {

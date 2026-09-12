@@ -129,6 +129,17 @@ export function createMockSource() {
     stop() { stopShot(); clearInterval(idleTimer); },
     simShot: startShot,
 
+    getWorkflow: async () => ({
+      profile: { title: 'Rao Allongé' },
+      context: {
+        targetDoseWeight: 18, targetYield: 36,
+        grinderModel: 'EK43S', grinderSetting: '3.10',
+        coffeeName: 'Scopius', coffeeRoaster: 'Midnight Coffee',
+      },
+      steamSettings: { targetTemperature: 155, duration: 40, flow: 0.5 },
+      hotWaterData: { targetTemperature: 75, volume: 50 },
+      rinseData: { duration: 5 },
+    }),
     getProfiles: async () => PROFILES.map((p) => ({ ...p, hidden: false })),
     getBeans: async () => BEANS.map((b) => ({ ...b })),
     getGrinders: async () => GRINDERS.map((g) => ({ ...g })),
@@ -138,11 +149,18 @@ export function createMockSource() {
       if (!s) return null;
       const d = s.duration;
       const j = ((Number(id.split('-')[1]) % 5) - 2) * 0.02;
+      // plano tracejado: o perfil com que o shot foi tirado (como no Bridge real,
+      // onde ele vem em shot.workflow.profile)
+      const plan = PROFILES.find((x) => x.name === s.profile);
       return {
         kind: 'shot', profile: s.profile, duration: d,
         pressure: scaled(P, d, j), flow: scaled(F, d, j), temp: scaled(T, d, 0),
         weight: scaled(W, d, 0).map(([tt, v]) => [tt, Number((v / 42 * s.yield).toFixed(1))]),
-        phases: [{ start: 0, end: d * 0.45, label: 'preinfusion' }, { start: d * 0.45, end: d, label: 'extraction' }],
+        pressureTarget: plan ? plan.pressure : null,
+        flowTarget: plan ? plan.flow : null,
+        phases: plan && plan.phases.length
+          ? plan.phases
+          : [{ start: 0, end: d * 0.45, label: 'preinfusion' }, { start: d * 0.45, end: d, label: 'extraction' }],
       };
     },
 

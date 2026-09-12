@@ -1,7 +1,7 @@
 // CREMA v2 · 04 · teclado numérico — componente único, tela cheia.
 // Usado por Grind/Dose/Drink/Brew e pelos valores manuais dos Adjustments.
 
-import { state, FIELDS } from './store.js';
+import { state, fieldFor } from './store.js';
 
 const PREV_KEY = 'crema.numpad.previous';
 
@@ -122,7 +122,7 @@ export function close() {
  */
 export function openNumpad(field, value, onConfirm, override) {
   if (!el) build();
-  const spec = { ...(FIELDS[field] || {}), ...(override || {}) };
+  const spec = { ...(fieldFor(field, value) || {}), ...(override || {}) };
   ctx = { field, spec, onConfirm };
   initial = value == null ? '' : String(Number(value).toFixed(spec.decimals)).replace(/\.?0+$/, (m) => (m.includes('.') ? '' : m));
   if (initial === '') initial = '0';

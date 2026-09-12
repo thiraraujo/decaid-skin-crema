@@ -283,17 +283,17 @@ function fmtTs(iso) {
   return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-// perfil v2 (steps) → curvas planejadas + fases da skin
-function mapProfileRecord(rec) {
-  const pr = rec.profile || rec;
-  const steps = pr.steps || [];
+// perfil v2 (steps) → curvas planejadas + fases da skin.
+// Cada step vira um patamar: pressão/fluxo/temperatura constantes durante `seconds`.
+export function profileToPlan(pr) {
+  const steps = (pr && pr.steps) || [];
   const pressure = [], flow = [], temp = [], phases = [];
   let t = 0;
   for (const s of steps) {
     const dur = s.seconds ?? s.duration ?? 10;
     const p0 = s.pressure ?? (pressure.length ? pressure[pressure.length - 1][1] : 0);
     const f0 = s.flow ?? (flow.length ? flow[flow.length - 1][1] : 0);
-    const tp = s.temperature ?? pr.tank_temperature ?? 90;
+    const tp = s.temperature ?? (pr && pr.tank_temperature) ?? 90;
     pressure.push([t, p0]); pressure.push([t + dur, p0]);
     if (s.flow != null) { flow.push([t, f0]); flow.push([t + dur, f0]); }
     temp.push([t, tp]); temp.push([t + dur, tp]);
@@ -301,12 +301,21 @@ function mapProfileRecord(rec) {
     t += dur;
   }
   return {
-    key: rec.id || pr.title,
-    name: pr.title || 'Profile',
-    type: pr.beverage_type === 'espresso' ? 'Advanced' : (pr.beverage_type || 'Profile'),
     duration: t || 30,
     pressure, flow: flow.length ? flow : null, temp,
     phases: phases.length > 1 ? phases : [],
+  };
+}
+
+function mapProfileRecord(rec) {
+  const pr = rec.profile || rec;
+  const plan = profileToPlan(pr);
+  return {
+    key: rec.id || pr.title,
+    id: rec.id || null,
+    name: pr.title || 'Profile',
+    type: pr.beverage_type === 'espresso' ? 'Advanced' : (pr.beverage_type || 'Profile'),
+    ...plan,
     hidden: rec.hidden === true || rec.isHidden === true || rec.visibility === 'hidden'
       || !!(rec.metadata && rec.metadata.hidden),
     raw: pr,
@@ -338,7 +347,15 @@ function mapShotMeasurements(shot) {
     weight.push([t, sc.weight ?? m.weight ?? 0]);
   }
   const dur = pressure.length ? pressure[pressure.length - 1][0] : 30;
-  const title = (shot.workflow && shot.workflow.profile && shot.workflow.profile.title)
-    || shot.profileTitle || 'Shot';
-  return { kind: 'shot', profile: title, duration: dur || 30, pressure, flow, temp, weight };
+  const pr = shot.workflow && shot.workflow.profile;
+  const title = (pr && pr.title) || shot.profileTitle || 'Shot';
+  // o próprio shot carrega o perfil com que foi tirado → plano (tracejado) e fases
+  const plan = pr ? profileToPlan(pr) : null;
+  return {
+    kind: 'shot', profile: title, duration: dur || 30,
+    pressure, flow, temp, weight,
+    pressureTarget: plan ? plan.pressure : null,
+    flowTarget: plan ? plan.flow : null,
+    phases: plan ? plan.phases : [],
+  };
 }

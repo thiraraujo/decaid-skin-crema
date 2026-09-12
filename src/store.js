@@ -21,6 +21,7 @@ export const state = {
   // perfis
   profiles: { all: [], favorites: [] },
   selectedProfileId: null,
+  loadedProfileTitle: null, // perfil que a máquina tem carregado
   profileBaseTemp: null,   // temperatura-base do perfil ativo (referência do Brew)
   chartMode: 'lastShot',       // 'lastShot' | 'plan' | 'live'
   staticAxis: true,
@@ -60,11 +61,24 @@ export const state = {
 
 // limites e passos de cada campo numérico (teclado + réguas)
 export const FIELDS = {
-  grind: { title: 'Grind', min: 0, max: 15, step: 0.05, decimals: 2, unit: '', hint: 'Input a value between 0–15' },
-  dose:  { title: 'Dose',  min: 5, max: 30, step: 1, decimals: 1, unit: 'g', hint: 'Input a value between 5–30g' },
-  drink: { title: 'Drink', min: 5, max: 120, step: 1, decimals: 1, unit: 'g', hint: 'Input a value between 5–120g' },
-  brew:  { title: 'Brew',  min: 80, max: 100, step: 1, decimals: 1, unit: '°C', hint: 'Input a value between 80–100°C' },
+  grind: { title: 'Grind', min: 0, max: 100, step: 0.05, decimals: 2, unit: '' },
+  dose:  { title: 'Dose',  min: 5, max: 30, step: 1, decimals: 1, unit: 'g' },
+  drink: { title: 'Drink', min: 5, max: 120, step: 1, decimals: 1, unit: 'g' },
+  brew:  { title: 'Brew',  min: 80, max: 100, step: 1, decimals: 1, unit: '°C' },
 };
+
+// A API não informa a escala do moedor (Grinder só tem settingType numeric|preset),
+// e ela varia muito — 0–11 num EK43, 0–100 num Kafatek, mícrons em outros. Então a
+// faixa se alarga para caber o valor que a máquina já tem, em vez de rejeitá-lo.
+export function fieldFor(name, value) {
+  const f = FIELDS[name];
+  if (!f) return null;
+  const v = Number(value);
+  if (!Number.isFinite(v) || (v >= f.min && v <= f.max)) return f;
+  const max = v > f.max ? Math.ceil(v * 1.5 / 10) * 10 : f.max;
+  const min = v < f.min ? Math.floor(v) : f.min;
+  return { ...f, min, max };
+}
 
 export function subscribe(fn) {
   listeners.add(fn);

@@ -1,7 +1,7 @@
 // CREMA v2 · tela principal (01 Home idle / 02 shot ao vivo).
 // Render puro a partir de `state` + interações da coluna da receita, carrossel e rodapé.
 
-import { state, setState, FIELDS, ratioText } from './store.js';
+import { state, setState, FIELDS, fieldFor, ratioText } from './store.js';
 import { miniChart } from './chart.js';
 import { sleepMachine, openAppSettings } from './host.js';
 import { openNumpad } from './numpad.js';
@@ -78,15 +78,25 @@ const STATE_PILL = {
   disconnected: { cls: 'state-pill--disconnected', icon: '#ic-cup-off',   label: 'Disconnected' },
 };
 
+// MachineState da API (rest_v1.yml) → as três pílulas do handoff (tela 11).
+// Estados de trabalho (espresso/steam/flush/…) continuam "Ready": a máquina está viva.
+const STATE_KIND = {
+  booting: 'heating', heating: 'heating', preheating: 'heating', fwUpgrade: 'heating',
+  sleeping: 'disconnected', disconnected: 'disconnected', error: 'disconnected', needsWater: 'disconnected',
+};
+const STATE_TEXT = {
+  sleeping: 'Sleeping', needsWater: 'Encher o tanque', error: 'Erro', busy: 'Busy',
+  cleaning: 'Cleaning', descaling: 'Descaling', fwUpgrade: 'Firmware',
+};
+
 export function renderMachine() {
   const m = state.machine;
 
-  const kind = m.state === 'ready' ? 'ready' : m.state === 'heating' ? 'heating' : m.state === 'disconnected' ? 'disconnected' : 'ready';
-  const p = STATE_PILL[kind];
+  const p = STATE_PILL[STATE_KIND[m.state] || 'ready'];
   const pill = $('state-pill');
   pill.className = `state-pill ${p.cls}`;
   $('state-icon').innerHTML = `<use href="${p.icon}"/>`;
-  $('state-label').textContent = m.state === 'sleeping' ? 'Sleeping' : p.label;
+  $('state-label').textContent = STATE_TEXT[m.state] || p.label;
 
   $('mix-value').textContent = fmt(m.mixTemp, 1);
   $('group-value').textContent = fmt(m.groupTemp, 1);
@@ -101,10 +111,27 @@ export function renderMachine() {
   renderTank();
 }
 
+// O nível de água NÃO é legível pela API do ReaPrime: MachineSnapshot não traz o
+// campo e /machine/waterLevels é só POST (define o limiar de reabastecimento).
+// O único sinal disponível é o estado `needsWater` — então a barra funciona como
+// aviso de reabastecer, e não como medidor. Com nível conhecido (mock/dev) ela
+// volta a ser medidor.
 function renderTank() {
-  const { tankPct, tankMl } = state.machine;
+  const { tankPct, tankMl, state: mState } = state.machine;
   const tank = $('tank');
+  const needsWater = mState === 'needsWater';
   const pct = tankPct == null ? null : Math.max(0, Math.min(100, tankPct));
+
+  tank.classList.toggle('is-unknown', pct == null && !needsWater);
+  tank.classList.toggle('is-refill', needsWater);
+
+  if (needsWater && pct == null) {
+    $('tank-fill').style.height = '6%';
+    $('tank-pct').style.bottom = '6%';
+    $('tank-pct').textContent = '!';
+    $('tank-ml').textContent = 'Encher';
+    return;
+  }
   $('tank-fill').style.height = `${pct ?? 0}%`;
   $('tank-pct').style.bottom = `${pct ?? 0}%`;
   $('tank-pct').textContent = pct == null ? DASH : `${Math.round(pct)}%`;
@@ -267,16 +294,18 @@ export function onShotEnded() {
 function bindRuler(id, field, apply) {
   const el = $(id);
   if (!el) return;
-  const f = FIELDS[field];
-  let startX = 0, startVal = 0, active = false;
+  let startX = 0, startVal = 0, active = false, f = FIELDS[field];
 
   const PX_PER_STEP = 7;   // um tique fino = um passo
 
   el.addEventListener('pointerdown', (e) => {
     active = true;
-    el.setPointerCapture(e.pointerId);
     startX = e.clientX;
     startVal = apply.get();
+    f = fieldFor(field, startVal);   // faixa efetiva do valor atual
+    // captura mantém o arrasto vivo se o dedo sair da régua; falha em ponteiros
+    // sintéticos (testes) e não deve derrubar o gesto
+    try { el.setPointerCapture(e.pointerId); } catch { /* segue sem captura */ }
   });
   el.addEventListener('pointermove', (e) => {
     if (!active) return;
@@ -373,25 +402,36 @@ export function initUI(chartInstance, dataSource) {
   renderAll();
 }
 
+// Swipe ou toque troca o perfil selecionado. Captura o ponteiro para que o gesto
+// sobreviva ao dedo saindo do trilho, e ignora o toque quando ele virou arrasto.
 function bindCarousel() {
   const host = $('carousel');
-  let x0 = null;
-  host.addEventListener('pointerdown', (e) => { x0 = e.clientX; });
+  const SWIPE_PX = 40;
+  let x0 = null, target = null;
+
+  host.addEventListener('pointerdown', (e) => {
+    x0 = e.clientX;
+    target = e.target.closest('.carousel__card');
+    try { host.setPointerCapture(e.pointerId); } catch { /* mouse sem captura: tudo bem */ }
+  });
   host.addEventListener('pointerup', (e) => {
     if (x0 == null) return;
-    const dx = e.clientX - x0;
+    // o canvas é escalado por transform: converte px de tela → px de layout
+    const scale = document.querySelector('.app').getBoundingClientRect().width / 1320;
+    const dx = (e.clientX - x0) / (scale || 1);
     x0 = null;
+    try { host.releasePointerCapture(e.pointerId); } catch {}
     const favs = state.profiles.favorites;
     if (!favs.length) return;
-    if (Math.abs(dx) > 40) {
-      const sel = Math.max(0, favs.findIndex((p) => p.key === state.selectedProfileId));
+    if (Math.abs(dx) > SWIPE_PX) {
       const n = favs.length;
+      const sel = Math.max(0, favs.findIndex((p) => p.key === state.selectedProfileId));
       selectProfile(favs[((sel + (dx < 0 ? 1 : -1)) % n + n) % n].key);
       return;
     }
-    const card = e.target.closest('.carousel__card');
-    if (card && card.dataset.key) selectProfile(card.dataset.key);
+    if (target && target.dataset.key) selectProfile(target.dataset.key);
   });
+  host.addEventListener('pointercancel', () => { x0 = null; target = null; });
 }
 
 function stepShot(dir) {

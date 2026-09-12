@@ -70,7 +70,7 @@ async function boot() {
     const mc = state.machine;
     mc.mixTemp = m.mixTemp;
     mc.groupTemp = m.groupTemp;
-    mc.state = m.state === 'idle' ? 'ready' : m.state;
+    mc.state = m.state || 'ready';   // estado bruto da API; ui.js mapeia p/ a pílula
     if (m.tankPct != null) { mc.tankPct = m.tankPct; mc.tankMl = m.tankMl; }
     renderMachine();
     if (!m.running) return;
@@ -116,7 +116,9 @@ async function boot() {
     source.start && source.start();
   }
 
-  await Promise.all([loadProfiles(source), loadLibrary(source), loadHistory(source)]);
+  // loadLibrary define state.loadedProfileTitle → precisa vir antes de loadProfiles
+  await loadLibrary(source);
+  await Promise.all([loadProfiles(source), loadHistory(source)]);
   renderAll();
 }
 
@@ -125,7 +127,15 @@ async function loadProfiles(source) {
   if (!all.length) return;
   state.profiles.all = all;
   state.profiles.favorites = all.filter((p) => !p.hidden).slice(0, 5);
-  if (!state.selectedProfileId && state.profiles.favorites.length) {
+  const loaded = state.loadedProfileTitle
+    && all.find((p) => p.name === state.loadedProfileTitle);
+  if (loaded) {
+    state.selectedProfileId = loaded.key;
+    // o perfil da máquina abre o carrossel, mesmo que não esteja entre os 5 favoritos
+    if (!state.profiles.favorites.some((p) => p.key === loaded.key)) {
+      state.profiles.favorites = [loaded, ...state.profiles.favorites].slice(0, 5);
+    }
+  } else if (!state.selectedProfileId && state.profiles.favorites.length) {
     state.selectedProfileId = state.profiles.favorites[0].key;
   }
   // temperatura-base do perfil ativo: referência para os deltas do Brew
@@ -138,9 +148,10 @@ async function loadProfiles(source) {
 }
 
 async function loadLibrary(source) {
-  const [beans, grinders] = await Promise.all([
+  const [beans, grinders, workflow] = await Promise.all([
     source.getBeans().catch(() => []),
     source.getGrinders().catch(() => []),
+    source.getWorkflow ? source.getWorkflow().catch(() => null) : Promise.resolve(null),
   ]);
   state.beans = beans.map((b) => ({
     id: b.id, name: b.name || b.coffeeName || '—',
@@ -148,13 +159,50 @@ async function loadLibrary(source) {
   }));
   state.grinders = grinders.map((g) => ({ id: g.id, name: g.model || g.name || '—' }));
 
-  // receita inicial = primeiro café/moedor da biblioteca, se ainda não houver
+  // A receita vem do que JÁ está carregado na máquina (GET /workflow → context).
+  // Sem isso a skin sobrescreveria o próximo shot com o primeiro café da biblioteca.
   const r = state.recipe;
-  if (!r.coffeeName && state.beans[0]) {
-    Object.assign(r, { coffeeId: state.beans[0].id, coffeeName: state.beans[0].name, coffeeBrand: state.beans[0].brand, coffeeProcess: state.beans[0].process });
+  const ctx = (workflow && workflow.context) || null;
+  if (ctx) {
+    if (ctx.targetDoseWeight != null) r.dose = ctx.targetDoseWeight;
+    if (ctx.targetYield) r.drink = ctx.targetYield;
+    if (ctx.grinderModel) r.grinderName = ctx.grinderModel;
+    if (ctx.grinderSetting != null && ctx.grinderSetting !== '') {
+      const g = Number(String(ctx.grinderSetting).replace(',', '.'));
+      if (!Number.isNaN(g)) r.grind = g;
+    }
+    if (ctx.coffeeName) r.coffeeName = ctx.coffeeName;
+    if (ctx.coffeeRoaster) r.coffeeBrand = ctx.coffeeRoaster;
+    if (ctx.grinderId) r.grinderId = ctx.grinderId;
   }
-  if (!r.grinderName && state.grinders[0]) {
-    Object.assign(r, { grinderId: state.grinders[0].id, grinderName: state.grinders[0].name });
+  // casa com a biblioteca para recuperar id / marca / processo do café e do moedor
+  const bean = state.beans.find((b) => b.name === r.coffeeName)
+    || (r.coffeeName ? null : state.beans[0]);
+  if (bean) {
+    r.coffeeId = bean.id;
+    r.coffeeName = bean.name;
+    if (!r.coffeeBrand) r.coffeeBrand = bean.brand;
+    r.coffeeProcess = bean.process;
+  }
+  const gr = state.grinders.find((g) => g.name === r.grinderName)
+    || (r.grinderName ? null : state.grinders[0]);
+  if (gr) { r.grinderId = gr.id; r.grinderName = gr.name; }
+
+  // auxiliares (flush / água quente / vapor) também vêm do workflow
+  if (workflow) {
+    const a = state.aux;
+    if (workflow.rinseData && workflow.rinseData.duration != null) a.flush.s = workflow.rinseData.duration;
+    if (workflow.hotWaterData) {
+      if (workflow.hotWaterData.volume != null) a.hotWater.ml = workflow.hotWaterData.volume;
+      if (workflow.hotWaterData.targetTemperature != null) a.hotWater.temp = workflow.hotWaterData.targetTemperature;
+    }
+    if (workflow.steamSettings) {
+      if (workflow.steamSettings.duration != null) a.steam.time = workflow.steamSettings.duration;
+      if (workflow.steamSettings.flow != null) a.steam.flow = workflow.steamSettings.flow;
+      a.steam.on = (workflow.steamSettings.duration ?? 0) > 0;
+    }
+    // perfil carregado na máquina = o selecionado na skin
+    if (workflow.profile && workflow.profile.title) state.loadedProfileTitle = workflow.profile.title;
   }
 }
 
