@@ -1,60 +1,68 @@
-// CREMA · estado central + pub/sub mínimo (espelha o `store` da Streamline)
-
-import { FAVORITES } from './profiles.js';
+// CREMA v2 · estado central + pub/sub mínimo.
+// Formato definido em docs/handoff-v2/README.md § State Management.
 
 const listeners = new Set();
 
 export const state = {
-  openModal: null,            // null | 'coffee' | 'adjust' | 'numpad' | 'profiles'
-  hostConnected: false,       // true quando ligado ao Bridge real
+  hostConnected: false,        // true quando ligado ao Bridge real
+  screen: 'home',              // 'home' | 'numpad' | 'history'
+  modal: null,                 // null | 'adjust' | 'coffee' | 'coffeehist' | 'editshot' | 'favorites'
 
-  favorites: [...FAVORITES],  // chaves dos perfis na barra superior
-  selectedProfileKey: 'padrao',
-  profileBaseTemp: null,      // temperatura-base do perfil ativo (p/ deltas do Brew)
-  graphMode: 'live',          // 'live' | 'profile' | 'shot'
-
-  // buffers do shot ao vivo (arrays de [t, valor])
-  liveShot: { pressure: [], flow: [], temp: [], weight: [] },
-
-  // últimos shots tirados (mais recente primeiro) — populado pelo Bridge no M4
-  recentShots: [
-    { ts: '2026/06/27 02:05', profile: 'Londonium', coffee: 'Scopius', dose: 18.0, yield: 36, grind: 4.2, duration: 30, finalWeight: 42 },
-    { ts: '2026/06/27 01:57', profile: 'Londonium', coffee: 'Scopius', dose: 18.0, yield: 36, grind: 4.2, duration: 30, finalWeight: 41 },
-    { ts: '2026/06/27 01:51', profile: 'Londonium', coffee: 'Ethiopia G1', dose: 17.5, yield: 34, grind: 4.0, duration: 29, finalWeight: 38 },
-    { ts: '2026/06/26 22:40', profile: 'Best practice (light roast)', coffee: 'Ethiopia G1', dose: 18.0, yield: 40, grind: 4.4, duration: 32, finalWeight: 44 },
-    { ts: '2026/06/26 22:15', profile: "80's Espresso", coffee: 'Scopius', dose: 20.0, yield: 40, grind: 3.8, duration: 27, finalWeight: 45 },
-  ],
-  shotIndex: 0,                // qual shot do histórico está em foco no card
-
-  // status da máquina / balança
-  status: {
-    ready: true,
-    connected: true,
-    scaleConnected: false,
-    mixTemp: 94.2,
-    groupTemp: 106.5,
-    tankMl: 537,
-    tankPct: 36,
-    weightG: 0,
-  },
-
-  // perfil / recipe selecionada
-  profile: {
-    coffee: 'Scopius',
-    grinder: 'EK43S',
-    grinderSetting: 0.0,
-    dose: 15.0,
-    drink: 0,
+  // receita do próximo shot — ratio é derivado (drink/dose)
+  recipe: {
+    coffeeId: null, coffeeName: '', coffeeBrand: '', coffeeProcess: '',
+    grinderId: null, grinderName: '',
+    grind: 3.10,
+    dose: 18,
+    drink: 36,
     brewTemp: 89,
-    ratio: '1:0',
-    flush: 5,
-    hotWater: { ml: 50, temp: 85 },
-    steam: false,
-    steamTime: 40,
-    steamFlow: 0.5,
-    staticTimer: 30,
-    staticOn: true,
   },
+
+  // perfis
+  profiles: { all: [], favorites: [] },
+  selectedProfileId: null,
+  chartMode: 'lastShot',       // 'lastShot' | 'plan' | 'live'
+  staticAxis: true,
+  staticTimer: 30,
+
+  // shot ao vivo
+  live: { running: false, t: 0, series: { pressure: [], flow: [], temp: [], weight: [] } },
+
+  // máquina
+  machine: {
+    state: 'disconnected',     // 'ready' | 'heating' | 'disconnected' | estado bruto da DE1
+    mixTemp: null, groupTemp: null,
+    tankMl: null, tankPct: null,
+    scale: { connected: false, weight: 0 },
+  },
+
+  // água quente / vapor / flush
+  aux: {
+    flush: { s: 5 },
+    hotWater: { ml: 50, temp: 75 },
+    steam: { on: false, time: 40, flow: 0.5 },
+  },
+
+  // histórico
+  history: [],
+  historyFilter: { coffeeId: null, coffeeLabel: '' },
+  selectedShotId: null,
+  shotIndex: 0,                // shot em foco no card do rodapé
+
+  // biblioteca
+  beans: [],
+  grinders: [],
+
+  // teclado numérico (componente único)
+  numpad: null,                // { field, title, value, min, max, decimals, unit, hint, previous[], onConfirm }
+};
+
+// limites e passos de cada campo numérico (teclado + réguas)
+export const FIELDS = {
+  grind: { title: 'Grind', min: 0, max: 15, step: 0.05, decimals: 2, unit: '', hint: 'Input a value between 0–15' },
+  dose:  { title: 'Dose',  min: 5, max: 30, step: 1, decimals: 1, unit: 'g', hint: 'Input a value between 5–30g' },
+  drink: { title: 'Drink', min: 5, max: 120, step: 1, decimals: 1, unit: 'g', hint: 'Input a value between 5–120g' },
+  brew:  { title: 'Brew',  min: 80, max: 100, step: 1, decimals: 1, unit: '°C', hint: 'Input a value between 80–100°C' },
 };
 
 export function subscribe(fn) {
@@ -69,4 +77,11 @@ export function emit(evt) {
 export function setState(patch) {
   Object.assign(state, patch);
   emit('state');
+}
+
+/** ratio derivado — sempre drink/dose com 1 decimal (somente leitura na UI) */
+export function ratioText() {
+  const { dose, drink } = state.recipe;
+  if (!dose || !drink) return '1:0.0';
+  return `1:${(drink / dose).toFixed(1)}`;
 }
