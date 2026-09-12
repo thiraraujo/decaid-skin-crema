@@ -5,12 +5,13 @@ import { createChart } from './chart.js';
 import { createApiSource, detectHost } from './api.js';
 import { createMockSource } from './mock.js';
 import { initScreens } from './screens.js';
+import { initProfiles } from './profiles.js';
 import { initWorkflow, baseTempOf } from './workflow.js';
 import { initHistory } from './history.js';
 import { initLive } from './live.js';
 import {
   initUI, renderAll, renderMachine, renderCarousel, renderLastShot, renderChart,
-  onShotStarted, onShotSample, onShotEnded,
+  onShotStarted, onShotSample, onShotEnded, selectProfile,
 } from './ui.js';
 
 // canvas fixo 1320×800 escalado para a tela real (independe de dpr)
@@ -65,6 +66,10 @@ async function boot() {
 
   initWorkflow(source);
   initScreens(source, () => renderAll());
+  initProfiles({
+    onUse: (key) => selectProfile(key),
+    onChanged: () => { renderCarousel(); renderChart(); },
+  });
   initHistory(source, () => renderAll());
   initUI(chart, source, liveChart);
 

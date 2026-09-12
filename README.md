@@ -32,10 +32,15 @@ branch `v2`. As atualizações chegam por *Check for updates* (ETag).
 | 09 | Coffee history (busca) | `src/history.js` |
 | 10 | Edit shot | `src/history.js` |
 | 11 | Estados da máquina (pílula) | `.state-pill` em `css/main.css` |
+| — | Perfis (favoritos, categorias, busca) | `src/profiles.js` |
 
-Favoritos (`✎ favoritos`) têm um gerenciador próprio em `src/screens.js`: lista **todos**
-os perfis da máquina (73 no Bridge de teste), com busca por nome, e marca até 5 para o
-carrossel.
+**Tela de Perfis** (`✎ perfis` no topo da home) em `src/profiles.js`: favoritos à esquerda
+(reordenar e remover), filtros por categoria, lista de **todos** os perfis da máquina
+(73 no Bridge de teste) com busca, e prévia com a curva planejada, as notas do perfil e
+duas ações — ★ favoritar e ☕ usar agora (entra no carrossel e vai para a máquina).
+
+As categorias saem do próprio título, que o Decaid escreve como `Categoria/Nome`
+(`Pour over basket/V60 22g in, 375g out`, `D-Flow / default`).
 
 A tela 02 mostra um bloco por fase do perfil conforme o shot avança (Yield / Temp /
 Pressure / Flow por fase). As fases vêm dos steps do perfil; a fase corrente, de
@@ -80,6 +85,11 @@ Detecção de host em `src/api.js`: `window.REA_HOST` → `localStorage.reaHostn
 | `GET/POST /beans` · `/grinders` | biblioteca Café & Moedor |
 | `PUT /workflow` | dose, drink, café, moedor, moagem, flush, água e vapor |
 | `PUT /machine/state/{state}` | STOP (o shot é disparado pelo GHC) |
+
+A pílula de estado lê `state.state` do snapshot e mapeia o enum `MachineState`:
+`idle` e os estados de trabalho → **READY** (verde), `heating`/`booting`/`preheating` →
+**HEATING** (âmbar), `sleeping`/`error`/`needsWater`/sem conexão → vermelho (com o texto
+próprio de cada um).
 
 **Regra de ouro:** com Bridge conectado a skin **nunca** usa mock. Sem dado real,
 mostra `—`.

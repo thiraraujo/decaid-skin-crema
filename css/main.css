@@ -199,6 +199,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   border-radius: 22px; border: 1px solid;
   display: flex; align-items: center; gap: 10px;
   font: 600 15px var(--sans);
+  text-transform: uppercase; letter-spacing: .06em;
   white-space: nowrap;
   transition: color .2s ease-out, border-color .2s ease-out, background-color .2s ease-out, box-shadow .2s ease-out;
 }

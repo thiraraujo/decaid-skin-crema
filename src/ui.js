@@ -5,7 +5,8 @@ import { state, setState, FIELDS, fieldFor, ratioText } from './store.js';
 import { miniChart } from './chart.js';
 import { sleepMachine, openAppSettings } from './host.js';
 import { openNumpad } from './numpad.js';
-import { openAdjust, openCoffee, openFavorites, openHistory } from './screens.js';
+import { openAdjust, openCoffee, openHistory } from './screens.js';
+import { openProfiles } from './profiles.js';
 import { pushWorkflow, pushProfile, pushBrewTemp, baseTempOf } from './workflow.js';
 import { startLive, onLiveSample, endLive } from './live.js';
 
@@ -80,16 +81,16 @@ const STATE_PILL = {
   disconnected: { cls: 'state-pill--disconnected', icon: '#ic-cup-off',   label: 'Disconnected' },
 };
 
-// MachineState da API (rest_v1.yml) → as três pílulas do handoff (tela 11).
+// MachineState da API (rest_v1.yml) → as três pílulas do handoff (tela 11):
+// Ready (verde) · Heating (âmbar) · Disconnected (vermelho).
 // Estados de trabalho (espresso/steam/flush/…) continuam "Ready": a máquina está viva.
 const STATE_KIND = {
   booting: 'heating', heating: 'heating', preheating: 'heating', fwUpgrade: 'heating',
   sleeping: 'disconnected', disconnected: 'disconnected', error: 'disconnected', needsWater: 'disconnected',
 };
-const STATE_TEXT = {
-  sleeping: 'Sleeping', needsWater: 'Encher o tanque', error: 'Erro', busy: 'Busy',
-  cleaning: 'Cleaning', descaling: 'Descaling', fwUpgrade: 'Firmware',
-};
+// Dois estados reais da máquina que não cabem em "Disconnected" sem mentir:
+// dormindo e sem água. Mantêm a cor vermelha da família.
+const STATE_TEXT = { sleeping: 'Sleeping', needsWater: 'Sem água' };
 
 export function renderMachine() {
   const m = state.machine;
@@ -383,7 +384,7 @@ export function initUI(chartInstance, dataSource, liveChart) {
   // --- topo ---
   $('btn-sleep').addEventListener('click', () => sleepMachine());
   $('btn-settings').addEventListener('click', () => openAppSettings());
-  $('edit-favorites').addEventListener('click', () => openFavorites());
+  $('edit-favorites').addEventListener('click', () => openProfiles());
 
   // --- carrossel ---
   bindCarousel();
