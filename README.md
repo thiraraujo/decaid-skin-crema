@@ -145,7 +145,7 @@ O ícone de ajustes no topo da home abre **Skin settings**:
 
 - **Live chart** — tempo inicial do eixo X no shot ao vivo com STATIC ligado, em passos de
   5 s (padrão 40 s, de 5 a 1000 s). Se o shot passar desse tempo, o eixo cresce contínuo.
-  Com STATIC desligado o eixo acompanha o tempo decorrido. STATIC e esse tempo valem só
+  Com STATIC desligado o eixo começa em 0 s e acompanha o tempo decorrido. STATIC e esse tempo valem só
   no shot ao vivo; home e histórico usam a duração do perfil/shot.
 - **Colors** — os temas abaixo.
 

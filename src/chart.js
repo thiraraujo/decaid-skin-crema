@@ -285,11 +285,11 @@ export function createChart(host, opts = {}) {
   };
 
   // Eixo X do shot ao vivo:
-  //   STATIC desligado → acompanha o tempo decorrido (mínimo 5 s);
+  //   STATIC desligado → acompanha o tempo decorrido desde 0 s;
   //   STATIC ligado    → começa fixo em Y (config da skin) e, se o shot passar de Y,
   //                      cresce contínuo junto com o tempo.
   function tMaxLive(elapsed) {
-    if (!cfg.staticOn) return Math.max(5, elapsed);
+    if (!cfg.staticOn) return Math.max(0.1, elapsed);   // 0.1 só evita dividir por zero
     return Math.max(cfg.staticTimer, elapsed);
   }
 
