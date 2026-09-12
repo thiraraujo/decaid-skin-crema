@@ -281,6 +281,8 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 }
 
 .scale-card { width: 225px; flex: none; height: 112px; padding: 16px 20px; display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+.scale-card .row { gap: 10px; }
+.scale-card .lb, .scale-card__value { white-space: nowrap; }
 .scale-card__value { font-size: 26px; }
 .scale-card__value .u { font-size: 13px; }
 .scale-card__status { font: 500 13px var(--sans); color: var(--red); }

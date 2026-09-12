@@ -73,7 +73,24 @@ Detecção de host em `src/api.js`: `window.REA_HOST` → `localStorage.reaHostn
 | `PUT /machine/state/{state}` | STOP (o shot é disparado pelo GHC) |
 
 **Regra de ouro:** com Bridge conectado a skin **nunca** usa mock. Sem dado real,
-mostra `—`. O tanque fica `—` enquanto o snapshot não trouxer nível de água.
+mostra `—`.
+
+Ao abrir, a skin **lê** `GET /workflow` e monta a receita a partir do que já está
+carregado na máquina (café, moedor, moagem, dose, drink, flush, água, vapor e
+perfil) — só depois passa a escrever. Os PUTs são deep-merge do lado do servidor,
+então enviar `hotWaterData: {volume}` preserva `duration` e `flow`.
+
+**Limites conhecidos da API** (`assets/api/rest_v1.yml` do repo do Decaid):
+
+- **Nível do tanque não é legível.** `MachineSnapshot` não traz o campo e
+  `/machine/waterLevels` é só `POST` (define o limiar de reabastecimento). A
+  barra do tanque fica vazia com `—` e só acende — em vermelho, com "Encher" —
+  quando o estado da máquina é `needsWater`.
+- **A escala do moedor não é informada.** `Grinder` só tem `settingType`
+  (`numeric` | `preset`), sem mínimo/máximo. A faixa do Grind assume 0–100 e
+  `fieldFor()` a alarga quando a máquina reporta um valor maior.
+- **Brew não existe no workflow.** A temperatura mora no perfil, por step: mudar
+  o Brew clona o perfil ativo e desloca todos os steps pelo delta.
 
 **GHC dispara o shot** — não há botão ESPRESSO na tela; durante a extração só `STOP`
 é interativo.
