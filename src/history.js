@@ -112,7 +112,7 @@ function paint() {
 
   screenEl.querySelector('#hs-list').innerHTML = list.map((s) => `
     <button class="history__item${s.id === state.selectedShotId ? ' is-on' : ''}" data-id="${esc(s.id)}" type="button">
-      <div class="history__item-l1"><span class="history__item-coffee">${esc(s.coffee || 'Sem café')}</span>${s.brand ? `<span class="history__item-brand">${esc(s.brand)}</span>` : ''}</div>
+      <div class="history__item-l1"><span class="history__item-coffee">${esc(s.coffee || 'No coffee')}</span>${s.brand ? `<span class="history__item-brand">${esc(s.brand)}</span>` : ''}</div>
       <div class="history__item-l2">${esc(s.profile || 'Shot')}${s.grinder ? ` · ${esc(s.grinder)} <span class="mono">${fmt(s.grind, 2)}</span>` : ''}</div>
       <div class="mono history__item-l3">${esc(itemMeta(s))}</div>
     </button>`).join('');
@@ -231,7 +231,7 @@ function buildSearch() {
     <div class="modal__head">
       <div>
         <div class="modal__title">Coffee history</div>
-        <div class="modal__sub">Como você acertou esse grão da última vez</div>
+        <div class="modal__sub">How you dialled this bean in last time</div>
       </div>
       <button class="modal__close tap" id="ch-close" type="button">×</button>
     </div>
@@ -239,7 +239,7 @@ function buildSearch() {
       <label class="select"><span class="lb">Brand</span><select id="ch-brand"></select><span class="select__caret">⇅</span></label>
       <label class="select"><span class="lb">Coffee</span><select id="ch-coffee"></select><span class="select__caret">⇅</span></label>
     </div>
-    <div class="lb coffeehist__label">Mais recentes</div>
+    <div class="lb coffeehist__label">Most recent</div>
     <div class="coffeehist__list" id="ch-list"></div>`;
   app().appendChild(searchEl);
 
@@ -260,7 +260,7 @@ function buildSearch() {
 function groupByCoffee() {
   const map = new Map();
   for (const s of state.history) {
-    const key = s.coffee || 'Sem café';
+    const key = s.coffee || 'No coffee';
     if (!map.has(key)) map.set(key, { coffee: key, brand: s.brand || '', id: s.coffeeId || '', shots: 0, last: s, });
     const g = map.get(key);
     g.shots++;
@@ -272,16 +272,16 @@ function groupByCoffee() {
 function daysAgo(at) {
   if (!at) return '';
   const d = Math.floor((Date.now() - at) / 86400000);
-  if (d <= 0) return 'hoje';
-  if (d === 1) return 'ontem';
-  return `há ${d} dias`;
+  if (d <= 0) return 'today';
+  if (d === 1) return 'yesterday';
+  return `${d} days ago`;
 }
 
 function paintSearch() {
   const groups = groupByCoffee();
   const brands = [...new Set(groups.map((g) => g.brand).filter(Boolean))];
   const coffees = [...new Set(groups.map((g) => g.coffee))];
-  const opt = (list, cur) => [`<option value="">Todos</option>`, ...list.map((v) => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(v)}</option>`)].join('');
+  const opt = (list, cur) => [`<option value="">All</option>`, ...list.map((v) => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(v)}</option>`)].join('');
   searchEl.querySelector('#ch-brand').innerHTML = opt(brands, searchFilter.brand);
   searchEl.querySelector('#ch-coffee').innerHTML = opt(coffees, searchFilter.coffee);
 
@@ -293,7 +293,7 @@ function paintSearch() {
     <button class="coffeehist__row row tap" data-coffee="${esc(g.coffee)}" data-id="${esc(g.id)}" type="button">
       <span><span class="coffeehist__name">${esc(g.coffee)}</span>${g.brand ? `<span class="coffeehist__brand">${esc(g.brand)}</span>` : ''}</span>
       <span class="mono coffeehist__meta">${esc(daysAgo(g.last.at))} · ${g.shots} shot${g.shots > 1 ? 's' : ''}${g.last.grinder ? ` · ${esc(g.last.grinder)} ${fmt(g.last.grind, 2)}` : ''}</span>
-    </button>`).join('') || `<div class="coffeehist__empty">Sem shots no histórico.</div>`;
+    </button>`).join('') || `<div class="coffeehist__empty">No shots in history.</div>`;
 }
 
 function openCoffeeSearch() {
@@ -350,7 +350,7 @@ function buildEdit() {
         <div class="ruler" id="ed-ruler" style="width:100%"><b></b><i></i></div>
       </div>
     </div>
-    <div class="mono editshot__note">Atualiza ESTE shot no histórico da Decent e no Visualizer (mesmo shot — não cria um novo).</div>`;
+    <div class="mono editshot__note">Updates THIS shot in the Decent history and on Visualizer (same shot — it does not create a new one).</div>`;
   app().appendChild(editEl);
 
   editEl.querySelector('#ed-cancel').addEventListener('click', hideEdit);

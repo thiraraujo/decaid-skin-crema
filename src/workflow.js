@@ -17,24 +17,43 @@ const debounced = (fn, ms = 400) => {
 };
 
 /** recipe + auxiliares → PUT /workflow */
+// Campos ainda desconhecidos (a máquina não respondeu) são OMITIDOS: o PUT é
+// deep-merge, então omitir preserva o que está lá. Enviar null limparia o campo
+// — e `targetYield` nem aceita null (400), porque null e 0 significam
+// "stop-at-weight desligado".
+const defined = (obj) => {
+  const out = {};
+  for (const k in obj) if (obj[k] != null && obj[k] !== '') out[k] = obj[k];
+  return out;
+};
+
 export const pushWorkflow = debounced(() => {
   if (!(source && source.putWorkflow)) return;
   const r = state.recipe;
   const a = state.aux;
-  source.putWorkflow({
-    context: {
-      targetDoseWeight: r.dose,
-      targetYield: r.drink,
-      grinderModel: r.grinderName,
-      grinderSetting: String(r.grind),
-      coffeeName: r.coffeeName,
-      coffeeRoaster: r.coffeeBrand,
-      finalBeverageType: 'espresso',
-    },
-    steamSettings: { targetTemperature: 155, duration: a.steam.time, flow: a.steam.flow },
-    hotWaterData: { targetTemperature: a.hotWater.temp, volume: a.hotWater.ml },
-    rinseData: { duration: a.flush.s },
+  const body = {};
+
+  const context = defined({
+    targetDoseWeight: r.dose,
+    targetYield: r.drink,
+    grinderModel: r.grinderName,
+    grinderSetting: r.grind == null ? null : String(r.grind),
+    coffeeName: r.coffeeName,
+    coffeeRoaster: r.coffeeBrand,
+    finalBeverageType: 'espresso',
   });
+  if (Object.keys(context).length) body.context = context;
+
+  const steam = defined({ duration: a.steam.time, flow: a.steam.flow });
+  if (Object.keys(steam).length) body.steamSettings = { targetTemperature: 155, ...steam };
+
+  const water = defined({ targetTemperature: a.hotWater.temp, volume: a.hotWater.ml });
+  if (Object.keys(water).length) body.hotWaterData = water;
+
+  const rinse = defined({ duration: a.flush.s });
+  if (Object.keys(rinse).length) body.rinseData = rinse;
+
+  if (Object.keys(body).length) source.putWorkflow(body);
 });
 
 /** perfil selecionado no carrossel → PUT /workflow { profile } */

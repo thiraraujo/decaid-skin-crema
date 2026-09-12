@@ -38,15 +38,15 @@ function build() {
   el.hidden = true;
   el.innerHTML = `
     <header class="profiles__head">
-      <button class="round-btn tap" id="pf-back" type="button" aria-label="Voltar">‹</button>
-      <h1 class="profiles__title" id="pf-title">Perfis</h1>
+      <button class="round-btn tap" id="pf-back" type="button" aria-label="Back">‹</button>
+      <h1 class="profiles__title" id="pf-title">Profiles</h1>
       <label class="profiles__search" id="pf-searchbox" hidden>
         <svg class="ic" width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><use href="#ic-search"/></svg>
-        <input id="pf-q" type="search" placeholder="Buscar perfil" autocomplete="off">
+        <input id="pf-q" type="search" placeholder="Search profiles" autocomplete="off">
       </label>
       <div class="profiles__head-actions">
         <span class="profiles__count" id="pf-count"></span>
-        <button class="round-btn tap" id="pf-search" type="button" aria-label="Buscar">
+        <button class="round-btn tap" id="pf-search" type="button" aria-label="Search">
           <svg class="ic" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><use href="#ic-search"/></svg>
         </button>
       </div>
@@ -55,11 +55,11 @@ function build() {
     <div class="profiles__body">
       <aside class="profiles__favs">
         <div class="row profiles__favs-head">
-          <span class="lb">Favoritos</span>
+          <span class="lb">Favourites</span>
           <span class="lb lb--muted" id="pf-favcount"></span>
         </div>
         <div class="profiles__favs-list" id="pf-favs"></div>
-        <p class="profiles__favs-hint" id="pf-favhint" hidden>Carrossel cheio: remova um favorito para incluir outro. <b>Usar</b> troca o último.</p>
+        <p class="profiles__favs-hint" id="pf-favhint" hidden>Carousel is full: remove a favourite to add another. <b>Use</b> replaces the last one.</p>
       </aside>
 
       <main class="profiles__main">
@@ -72,8 +72,8 @@ function build() {
               <div class="row profiles__detail-head">
                 <h2 class="profiles__name" id="pf-name">—</h2>
                 <div class="profiles__actions">
-                  <button class="round-btn round-btn--blue tap" id="pf-fav" type="button" aria-label="Favoritar">★</button>
-                  <button class="round-btn round-btn--green tap" id="pf-use" type="button" aria-label="Usar este perfil">
+                  <button class="round-btn round-btn--blue tap" id="pf-fav" type="button" aria-label="Add to favourites">★</button>
+                  <button class="round-btn round-btn--green tap" id="pf-use" type="button" aria-label="Use this profile">
                     <svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-cup"/></svg>
                   </button>
                 </div>
@@ -150,7 +150,7 @@ const byKey = (key) => allProfiles().find((p) => p.key === key) || null;
 function paintCats() {
   const cats = categories();
   $('pf-cats').innerHTML = [
-    `<button class="chip chip--cat${cat === null ? ' is-on' : ''}" data-cat="" type="button">Todos</button>`,
+    `<button class="chip chip--cat${cat === null ? ' is-on' : ''}" data-cat="" type="button">All</button>`,
     ...cats.map((c) => `<button class="chip chip--cat${cat === c ? ' is-on' : ''}" data-cat="${esc(c)}" type="button">${esc(c)}</button>`),
   ].join('');
 }
@@ -164,9 +164,9 @@ function paintList() {
     return `<button class="profiles__item${p.key === previewKey ? ' is-on' : ''}" data-key="${esc(p.key)}" type="button">
       <span class="profiles__item-name">${esc(label)}${isFav(p.key) ? '<span class="profiles__item-star">★</span>' : ''}</span>
       ${c ? `<span class="profiles__item-cat">${esc(c)}</span>` : ''}
-      ${p.hidden ? '<span class="profiles__item-cat">oculto na máquina</span>' : ''}
+      ${p.hidden ? '<span class="profiles__item-cat">hidden on machine</span>' : ''}
     </button>`;
-  }).join('') || '<div class="coffeehist__empty">Nenhum perfil com esse nome.</div>';
+  }).join('') || '<div class="coffeehist__empty">No profile matches that name.</div>';
 }
 
 function paintFavs() {
@@ -186,11 +186,11 @@ function paintFavs() {
         </span>
         <button class="fav-card__remove tap" data-act="remove" data-key="${esc(p.key)}" type="button">
           <svg class="ic" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><use href="#ic-star-off"/></svg>
-          Remover
+          Remove
         </button>
       </div>
     </div>`;
-  }).join('') || '<div class="profiles__favs-empty">Marque até 5 perfis com ★ para colocá-los no carrossel.</div>';
+  }).join('') || '<div class="profiles__favs-empty">Star up to 5 profiles to put them on the carousel.</div>';
 
   const hint = $('pf-favhint');
   if (hint) hint.hidden = favs.length < MAX_FAVS;

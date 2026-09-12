@@ -160,7 +160,7 @@ export function openAdjust() {
 }
 
 // ===================== 05/06 · Coffee & Grinder =====================
-const PROCESSES = ['Washed', 'Natural', 'Honey', 'Anaeróbico'];
+const PROCESSES = ['Washed', 'Natural', 'Honey', 'Anaerobic'];
 
 let coffeeEl = null;
 let creating = { coffee: false, grinder: false };
@@ -174,14 +174,14 @@ function buildCoffee() {
     <div class="modal__head">
       <div>
         <div class="modal__title">Coffee &amp; Grinder</div>
-        <div class="modal__sub">Toque num recente para aplicar, ou crie um novo.</div>
+        <div class="modal__sub">Tap a recent one to apply it, or create a new one.</div>
       </div>
       <button class="btn-primary" id="pk-done" type="button">Done</button>
     </div>
     <div class="picker__grid">
       <div class="picker__col" data-kind="coffee">
         <div class="row picker__colhead">
-          <div class="lb lb--md" data-role="title">Coffee · recentes</div>
+          <div class="lb lb--md" data-role="title">Coffee · recent</div>
           <div class="picker__colactions"></div>
         </div>
         <div class="picker__form" hidden></div>
@@ -189,7 +189,7 @@ function buildCoffee() {
       </div>
       <div class="picker__col" data-kind="grinder">
         <div class="row picker__colhead">
-          <div class="lb lb--md" data-role="title">Grinder · recentes</div>
+          <div class="lb lb--md" data-role="title">Grinder · recent</div>
           <div class="picker__colactions"></div>
         </div>
         <div class="picker__form" hidden></div>
@@ -211,12 +211,12 @@ function paintCol(kind) {
   const col = colOf(kind);
   const isCoffee = kind === 'coffee';
   const label = isCoffee ? 'Coffee' : 'Grinder';
-  col.querySelector('[data-role="title"]').textContent = `${label} · ${creating[kind] ? 'novo' : 'recentes'}`;
+  col.querySelector('[data-role="title"]').textContent = `${label} · ${creating[kind] ? 'new' : 'recent'}`;
 
   const actions = col.querySelector('.picker__colactions');
   actions.innerHTML = creating[kind]
-    ? `<button class="pill pill--40 tap" data-act="cancel" type="button">Cancelar</button>
-       <button class="pill pill--40 pill--blue tap" data-act="add" type="button">Adicionar</button>`
+    ? `<button class="pill pill--40 tap" data-act="cancel" type="button">Cancel</button>
+       <button class="pill pill--40 pill--blue tap" data-act="add" type="button">Add</button>`
     : `<button class="pill pill--40 pill--blue tap" data-act="new" type="button">+ New</button>`;
   actions.onclick = (e) => {
     const b = e.target.closest('[data-act]');
@@ -231,12 +231,12 @@ function paintCol(kind) {
   form.hidden = !creating[kind];
   if (creating[kind]) {
     form.innerHTML = isCoffee
-      ? `<input class="field field--focus" data-k="name" placeholder="Nome do café" value="${esc(draft.coffee.name)}">
-         <input class="field" data-k="brand" placeholder="Marca / roaster" value="${esc(draft.coffee.brand)}">
-         <div class="picker__proc"><span class="lb">Processo</span>${
+      ? `<input class="field field--focus" data-k="name" placeholder="Coffee name" value="${esc(draft.coffee.name)}">
+         <input class="field" data-k="brand" placeholder="Brand / roaster" value="${esc(draft.coffee.brand)}">
+         <div class="picker__proc"><span class="lb">Process</span>${
             PROCESSES.map((p) => `<button class="chip chip--proc${p === draft.coffee.process ? ' is-on' : ''}" data-p="${p}" type="button">${p}</button>`).join('')
          }</div>`
-      : `<input class="field field--focus" data-k="name" placeholder="Nome do moedor" value="${esc(draft.grinder.name)}">`;
+      : `<input class="field field--focus" data-k="name" placeholder="Grinder name" value="${esc(draft.grinder.name)}">`;
     form.oninput = (e) => { const k = e.target.dataset.k; if (k) draft[kind][k] = e.target.value; };
     form.onclick = (e) => {
       const b = e.target.closest('[data-p]');
