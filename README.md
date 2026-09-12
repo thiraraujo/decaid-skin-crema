@@ -52,6 +52,17 @@ A tela 02 mostra um bloco por fase do perfil conforme o shot avança (Yield / Te
 Pressure / Flow por fase). As fases vêm dos steps do perfil; a fase corrente, de
 `profileFrame` no snapshot — sem esse campo, dos tempos planejados.
 
+## Gráfico do shot
+
+- **Linha planejada (tracejada):** vem do próprio shot, não do perfil. Ao vivo, são os
+  alvos `targetPressure` / `targetFlow` que a máquina manda a cada snapshot, desenhados só
+  até o instante atual; no histórico, os mesmos alvos gravados nas `measurements` do shot.
+  A máquina zera o alvo da bomba que não está em uso (step de fluxo → alvo de pressão 0),
+  então a linha é interrompida nesses trechos, conforme o `pump` do step corrente. Shot
+  gravado sem esses campos fica sem tracejado. A prévia do perfil na home, antes do shot,
+  continua mostrando o plano inteiro.
+- **Eixo da direita (peso):** escala 0–100 g, sem números.
+
 No histórico, **Apply** copia café, moedor, moagem, dose e drink do shot para a tela
 principal (e para o workflow da máquina); **Edit** corrige os dados daquele shot.
 

@@ -95,6 +95,8 @@ export function createApiSource() {
             targetMixTemp: m.targetMixTemperature ?? null,
             targetGroupTemp: m.targetGroupTemperature ?? null,
             temp: m.mixTemperature ?? 0,
+            targetPressure: Number.isFinite(m.targetPressure) ? m.targetPressure : null,
+            targetFlow: Number.isFinite(m.targetFlow) ? m.targetFlow : null,
             frame: Number.isInteger(m.profileFrame) ? m.profileFrame : null,
           });
         }
@@ -353,6 +355,20 @@ function fmtTs(iso) {
   return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
+// Alvo (linha tracejada) de uma amostra real. A máquina manda `targetPressure` e
+// `targetFlow` sempre, mas zera o da bomba que não está em uso: num step de fluxo o
+// alvo de pressão vem 0 (e vice-versa). `null` = sem linha nesse trecho.
+// Com o perfil em mãos, o `pump` do step corrente decide; sem ele, só vale alvo > 0.
+export function pumpAt(profile, frame) {
+  const s = profile && Array.isArray(profile.steps) && Number.isInteger(frame) ? profile.steps[frame] : null;
+  return s && (s.pump === 'pressure' || s.pump === 'flow') ? s.pump : null;
+}
+export function activeTarget(value, kind, pump) {
+  if (value == null || !Number.isFinite(value)) return null;
+  if (pump) return pump === kind ? value : null;
+  return value > 0.05 ? value : null;
+}
+
 // perfil v2 (steps) → curvas planejadas + fases da skin.
 // Cada step vira um patamar: pressão/fluxo/temperatura constantes durante `seconds`.
 export function profileToPlan(pr) {
@@ -405,7 +421,10 @@ function mapShotMeasurements(shot) {
   if (!shot) return null;
   const ms = shot.measurements || shot.samples || shot.data || [];
   if (!ms.length) { console.warn('[CREMA] shot sem measurements', shot && Object.keys(shot)); return null; }
+  const pr = shot.workflow && shot.workflow.profile;
   const pressure = [], flow = [], temp = [], weight = [];
+  const pressureTarget = [], flowTarget = [];
+  let hasTargets = false;
   const t0 = tsSeconds(ms[0]);
   for (const m of ms) {
     const mt = m.machine || m;
@@ -415,18 +434,22 @@ function mapShotMeasurements(shot) {
     flow.push([t, mt.flow ?? 0]);
     temp.push([t, mt.mixTemperature ?? mt.groupTemperature ?? 0]);
     weight.push([t, sc.weight ?? m.weight ?? 0]);
+    // linha planejada = os alvos que a máquina gravou em cada amostra
+    if (mt.targetPressure != null || mt.targetFlow != null) hasTargets = true;
+    const pump = pumpAt(pr, mt.profileFrame);
+    pressureTarget.push([t, activeTarget(mt.targetPressure, 'pressure', pump)]);
+    flowTarget.push([t, activeTarget(mt.targetFlow, 'flow', pump)]);
   }
   const dur = pressure.length ? pressure[pressure.length - 1][0] : 30;
-  const pr = shot.workflow && shot.workflow.profile;
   const title = (pr && pr.title) || shot.profileTitle || 'Shot';
-  // o próprio shot carrega o perfil com que foi tirado → plano (tracejado) e fases
+  // o próprio shot carrega o perfil com que foi tirado → fases e temperatura de brew
   const plan = pr ? profileToPlan(pr) : null;
   const brewTemp = plan && plan.temp && plan.temp.length ? plan.temp[0][1] : null;
   return {
     kind: 'shot', profile: title, duration: dur || 30, brewTemp,
     pressure, flow, temp, weight,
-    pressureTarget: plan ? plan.pressure : null,
-    flowTarget: plan ? plan.flow : null,
+    pressureTarget: hasTargets ? pressureTarget : null,
+    flowTarget: hasTargets ? flowTarget : null,
     phases: plan ? plan.phases : [],
   };
 }
