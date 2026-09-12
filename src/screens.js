@@ -4,6 +4,7 @@
 import { state } from './store.js';
 import { openNumpad } from './numpad.js';
 import { pushWorkflow } from './workflow.js';
+import { THEMES, applyTheme, currentTheme } from './theme.js';
 
 let scrim = null;
 let source = null;
@@ -27,7 +28,7 @@ function ensureScrim() {
 
 const openModals = new Set();
 
-function showModal(el) {
+export function showModal(el) {
   ensureScrim().hidden = false;
   el.hidden = false;
   openModals.add(el);
@@ -309,3 +310,58 @@ function esc(s) {
 
 export { esc };
 export { openHistory } from './history.js';
+
+// ===================== Cores (tema) =====================
+let themesEl = null;
+
+function buildThemes() {
+  themesEl = document.createElement('div');
+  themesEl.className = 'modal modal--wide themes';
+  themesEl.hidden = true;
+  themesEl.innerHTML = `
+    <div class="modal__head">
+      <div>
+        <div class="modal__title">Colors</div>
+        <div class="modal__sub">Only the colors change — the layout stays the same.</div>
+      </div>
+      <button class="btn-primary" id="th-done" type="button">Done</button>
+    </div>
+    <div class="themes__grid" id="th-grid"></div>`;
+  app().appendChild(themesEl);
+  themesEl.querySelector('#th-done').addEventListener('click', () => closeModal(themesEl));
+  themesEl.querySelector('#th-grid').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-theme-id]');
+    if (!b) return;
+    applyTheme(b.dataset.themeId);   // aplica na hora: o próprio modal já mostra o tema
+    paintThemes();
+  });
+}
+
+function paintThemes() {
+  const cur = currentTheme();
+  themesEl.querySelector('#th-grid').innerHTML = THEMES.map((t) => {
+    const w = t.swatch;
+    const on = t.id === cur;
+    return `<button class="theme-card${on ? ' is-on' : ''}" data-theme-id="${esc(t.id)}" type="button" aria-pressed="${on}">
+      <span class="theme-card__preview" style="background:${w.bg}">
+        <span class="theme-card__panel" style="background:${w.surface}">
+          <span>
+            <span class="theme-card__line" style="background:${w.text}"></span>
+            <span class="theme-card__line theme-card__line--short" style="background:${w.label}"></span>
+          </span>
+          <span class="theme-card__dots">
+            <i style="background:${w.blue}"></i><i style="background:${w.green}"></i><i style="background:${w.red}"></i><i style="background:${w.amber}"></i>
+          </span>
+        </span>
+      </span>
+      <span class="theme-card__name">${esc(t.name)}${on ? '<span class="theme-card__check">✓</span>' : ''}</span>
+    </button>`;
+  }).join('');
+}
+
+export function openThemes() {
+  if (!themesEl) buildThemes();
+  paintThemes();
+  state.modal = 'themes';
+  showModal(themesEl);
+}

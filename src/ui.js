@@ -5,7 +5,7 @@ import { state, setState, FIELDS, PRESETS, fieldFor, ratioText } from './store.j
 import { miniChart } from './chart.js';
 import { sleepMachine, wakeMachine, openAppSettings } from './host.js';
 import { openNumpad } from './numpad.js';
-import { openAdjust, openCoffee, openHistory } from './screens.js';
+import { openAdjust, openCoffee, openHistory, openThemes } from './screens.js';
 import { openProfiles } from './profiles.js';
 import { pushWorkflow, pushProfile, pushBrewTemp, baseTempOf } from './workflow.js';
 import { startLive, onLiveSample, endLive } from './live.js';
@@ -428,6 +428,7 @@ export function initUI(chartInstance, dataSource, liveChart) {
 
   // --- topo ---
   $('btn-sleep').addEventListener('click', () => sleepMachine());
+  $('btn-theme').addEventListener('click', () => openThemes());
   $('sleep-veil').addEventListener('click', () => wakeMachine());
   $('btn-settings').addEventListener('click', async () => {
     const ok = await openAppSettings();

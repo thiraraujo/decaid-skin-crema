@@ -59,6 +59,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   font: 600 15px var(--sans); color: var(--text-2);
   white-space: nowrap;
 }
+.pill--icon { width: 44px; padding: 0; justify-content: center; }
 .pill--sm { height: 32px; padding: 0 14px; font-size: 12px; letter-spacing: .06em; }
 .pill--blue { color: var(--blue); border-color: var(--sel-border); }
 
@@ -95,12 +96,12 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 
 /* estado "pressionado" — 150ms ease-out (README · Interactions) */
 .tap { transition: background-color .15s ease-out, opacity .15s ease-out; border-radius: 10px; }
-.tap:active { background-color: rgba(255,255,255,.06); }
+.tap:active { background-color: var(--press); }
 
 /* toggle */
 .toggle {
   width: 50px; height: 30px; border-radius: 15px; flex: none;
-  background: rgba(255,255,255,.14); position: relative;
+  background: var(--border); position: relative;
   transition: background-color .15s ease-out;
 }
 .toggle i {
@@ -109,7 +110,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   background: var(--bg);
   transition: transform .15s ease-out;
 }
-.toggle.is-on { background: #2F86D8; }
+.toggle.is-on { background: var(--toggle-on); }
 .toggle.is-on i { transform: translateX(20px); }
 .toggle-label { font: 500 15px var(--sans); color: var(--text-2); }
 
@@ -122,10 +123,10 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 /* régua (grind · dose · drink) — trilho 22px, ticks 7px/35px, sem números */
 .ruler {
   position: relative; height: 22px; margin-top: 6px;
-  border-bottom: 1px solid rgba(255,255,255,.3);
+  border-bottom: 1px solid rgba(var(--line-rgb), var(--a30));
   background:
-    repeating-linear-gradient(90deg, rgba(255,255,255,.22) 0 1px, transparent 1px 7px) 0 100%/100% 8px no-repeat,
-    repeating-linear-gradient(90deg, rgba(255,255,255,.45) 0 1px, transparent 1px 35px) 0 100%/100% 14px no-repeat;
+    repeating-linear-gradient(90deg, rgba(var(--line-rgb), var(--a22)) 0 1px, transparent 1px 7px) 0 100%/100% 8px no-repeat,
+    repeating-linear-gradient(90deg, rgba(var(--line-rgb), var(--a45)) 0 1px, transparent 1px 35px) 0 100%/100% 14px no-repeat;
   touch-action: none;
 }
 .ruler i {
@@ -229,16 +230,16 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   transition: color .2s ease-out, border-color .2s ease-out, background-color .2s ease-out, box-shadow .2s ease-out;
 }
 .state-pill--ready {
-  color: var(--green); border-color: rgba(95,217,142,.6);
-  background: rgba(95,217,142,.12); box-shadow: 0 0 18px rgba(95,217,142,.18);
+  color: var(--green); border-color: rgba(var(--green-rgb), .6);
+  background: rgba(var(--green-rgb), .12); box-shadow: 0 0 18px rgba(var(--green-rgb), .18);
 }
 .state-pill--heating {
-  color: var(--amber); border-color: rgba(240,163,95,.6);
-  background: rgba(240,163,95,.12); box-shadow: 0 0 18px rgba(240,163,95,.18);
+  color: var(--amber); border-color: rgba(var(--amber-rgb), .6);
+  background: rgba(var(--amber-rgb), .12); box-shadow: 0 0 18px rgba(var(--amber-rgb), .18);
 }
 .state-pill--disconnected {
-  color: var(--red); border-color: rgba(240,106,74,.6);
-  background: rgba(240,106,74,.12);
+  color: var(--red); border-color: rgba(var(--red-rgb), .6);
+  background: rgba(var(--red-rgb), .12);
 }
 
 /* ---------- carrossel de favoritos ---------- */
@@ -253,7 +254,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 }
 .carousel__card--center {
   background: var(--profile-card);
-  box-shadow: 0 24px 60px rgba(0,0,0,.55);
+  box-shadow: var(--shadow-profile);
   z-index: 3;
 }
 .carousel__card--near {
@@ -275,7 +276,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .carousel__mini {
   width: 160px; height: 126px; flex: none;
   border-radius: 18px 0 0 18px;
-  background: rgba(0,0,0,.18);
+  background: rgba(0,0,0,.18);   /* sobre o gradiente azul: igual em todos os temas */
 }
 .carousel__name { font: 600 24px/1.1 var(--sans); }
 .carousel__meta { font: 400 14px var(--mono); opacity: .85; margin-top: 6px; }
@@ -328,7 +329,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .tank__fill {
   position: absolute; left: 0; right: 0; bottom: 0; height: 0;
   border-radius: 11px;
-  background: linear-gradient(180deg, #7CC4FF, var(--blue));
+  background: linear-gradient(180deg, var(--blue-soft), var(--blue));
   transition: height .4s ease-out, background .4s ease-out;
 }
 .tank__pct {
@@ -340,9 +341,9 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 }
 .tank__ml { font-size: 16px; line-height: 1; color: var(--text); }
 .tank__ml .u { font-size: 10px; }
-.tank.is-low .tank__fill { background: linear-gradient(180deg, #FFD1A0, var(--amber)); }
+.tank.is-low .tank__fill { background: linear-gradient(180deg, var(--amber-soft), var(--amber)); }
 .tank.is-low .tank__pct { color: var(--amber); }
-.tank.is-critical .tank__fill { background: linear-gradient(180deg, #FF9C80, var(--red)); }
+.tank.is-critical .tank__fill { background: linear-gradient(180deg, var(--red-soft), var(--red)); }
 .tank.is-critical .tank__pct { color: var(--red); }
 
 /* sem leitura de nível (Bridge real): tubo vazio, sem número fingido */
@@ -351,15 +352,15 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .tank.is-unknown .tank__ml { color: var(--label); }
 
 /* estado needsWater: a barra vira aviso de reabastecer */
-.tank.is-refill .tank__fill { background: linear-gradient(180deg, #FF9C80, var(--red)); }
+.tank.is-refill .tank__fill { background: linear-gradient(180deg, var(--red-soft), var(--red)); }
 .tank.is-refill .tank__pct { color: var(--red); font-weight: 600; }
 .tank.is-refill .tank__ml { color: var(--red); font-size: 13px; }
-.tank.is-refill .tank__tube { box-shadow: 0 0 0 1px rgba(240,106,74,.45); }
+.tank.is-refill .tank__tube { box-shadow: 0 0 0 1px rgba(var(--red-rgb), .45); }
 
 /* ---------- máquina dormindo ---------- */
 .sleep-veil {
   position: absolute; inset: 0; z-index: 60;
-  background: rgba(15,17,19,.94);
+  background: rgba(var(--bg-rgb), .94);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
   color: var(--muted);
   animation: veil-in .3s ease-out;
@@ -369,7 +370,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .sleep-veil__title { font: 600 13px var(--sans); letter-spacing: .2em; text-transform: uppercase; color: var(--text-2); }
 .sleep-veil__hint { font: 500 15px var(--sans); color: var(--muted); }
 
-.pill.is-warn { color: var(--amber); border-color: rgba(240,163,95,.5); }
+.pill.is-warn { color: var(--amber); border-color: rgba(var(--amber-rgb), .5); }
 
 /* ======================= 02 · SHOT AO VIVO ======================= */
 /* Tela própria (docs/handoff-shot-live): cabeçalho com a receita em leitura,
@@ -404,7 +405,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .live__timer .u { font-size: 24px; }
 .btn-stop {
   height: 44px; padding: 0 22px;
-  border: 1px solid rgba(240,106,74,.7); border-radius: 22px;
+  border: 1px solid rgba(var(--red-rgb), .7); border-radius: 22px;
   display: flex; align-items: center; gap: 10px;
   font: 600 15px var(--sans); color: var(--red); letter-spacing: .06em;
 }
@@ -453,7 +454,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .phase-card__time { margin-top: 2px; }
 .phase-card__n {
   width: 22px; height: 22px; border-radius: 50%; flex: none;
-  background: rgba(255,255,255,.10);
+  background: rgba(var(--line-rgb), var(--a10));
   display: inline-flex; align-items: center; justify-content: center;
   font: 400 11px var(--sans); color: var(--text);
 }
@@ -474,8 +475,8 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 
 .phase-card.is-current {
   opacity: 1;
-  border-color: rgba(95,217,142,.45);
-  background: rgba(95,217,142,.05);
+  border-color: rgba(var(--green-rgb), .45);
+  background: rgba(var(--green-rgb), .05);
 }
 .phase-card.is-current .phase-card__name { color: var(--text); }
 .phase-card.is-current .phase-card__n { background: var(--green); color: var(--bg); }
