@@ -1,6 +1,6 @@
 // CREMA v2 · bootstrap. Escolhe a fonte (Bridge real vs mock) e liga estado → telas.
 
-import { state, setState } from './store.js';
+import { state, setState, clampStaticSeconds } from './store.js';
 import { createChart } from './chart.js';
 import { createApiSource, detectHost } from './api.js';
 import { createMockSource } from './mock.js';
@@ -125,7 +125,8 @@ async function boot() {
   const chart = createChart(document.getElementById('chart-host'), { gap: 80 });
   // a tela 02 tem o seu próprio gráfico (suavizado, 2px) — ver src/live.js
   const liveChart = initLive();
-  for (const c of [chart, liveChart]) c.setConfig({ staticOn: state.staticAxis, staticTimer: state.staticTimer });
+  chart.setConfig({ staticOn: state.staticAxis });
+  liveChart.setConfig({ staticOn: state.staticAxis, staticTimer: state.staticTimer });
 
   // `?mock=1` força a fonte simulada (só p/ desenvolvimento visual: no app real,
   // com Bridge conectado, a skin nunca usa mock).
@@ -137,7 +138,7 @@ async function boot() {
   // leitura do que é da skin mas mora no app (tema, favoritos, eixo Static, teclado);
   // começa já, em paralelo com a leitura da máquina, e entra no portão abaixo
   const themeRead = loadThemeFromHost();
-  const prefsRead = loadPrefs(['favorites', 'staticAxis', 'numpadPrevious']);
+  const prefsRead = loadPrefs(['favorites', 'staticAxis', 'staticSeconds', 'numpadPrevious']);
   console.info(`[CREMA v2] fonte: ${source.kind}`);
 
   initWorkflow(source);
@@ -267,6 +268,7 @@ async function boot() {
 
 function applyPrefs(prefs) {
   if (typeof prefs.staticAxis === 'boolean') state.staticAxis = prefs.staticAxis;
+  if (typeof prefs.staticSeconds === 'number') state.staticTimer = clampStaticSeconds(prefs.staticSeconds);
   renderStaticToggle();
   if (prefs.numpadPrevious && typeof prefs.numpadPrevious === 'object') state.numpadPrevious = prefs.numpadPrevious;
 }

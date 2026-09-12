@@ -459,8 +459,18 @@
 
 /* ======================= CORES (tema) ======================= */
 .themes { padding: 30px 40px 32px; background: var(--bg); }
+.skinset__axis {
+  flex: none; margin-top: 22px; padding: 16px 20px; gap: 24px;
+  border: 1px solid var(--border-soft); border-radius: var(--r-card);
+}
+.skinset__hint { margin: 8px 0 0; }
+.skinset__stepper { display: flex; align-items: center; gap: 14px; flex: none; }
+.skinset__value { font-size: 28px; min-width: 96px; text-align: center; }
+.stepper[disabled] { opacity: .3; }
+.skinset__colors { flex: none; margin-top: 22px; gap: 14px; }
+.skinset__colors-sub { margin: 0; letter-spacing: 0; text-transform: none; }
 .themes__grid {
-  flex: 1; min-height: 0; margin-top: 24px;
+  flex: 1; min-height: 0; margin-top: 14px;
   display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 1fr; gap: 16px;
 }
 .theme-card {

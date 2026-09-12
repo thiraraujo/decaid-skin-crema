@@ -1,7 +1,7 @@
 // CREMA v2 · tela principal (01 Home idle / 02 shot ao vivo).
 // Render puro a partir de `state` + interações da coluna da receita, carrossel e rodapé.
 
-import { state, setState, FIELDS, PRESETS, fieldFor, ratioText } from './store.js';
+import { state, setState, FIELDS, PRESETS, fieldFor, ratioText, clampStaticSeconds } from './store.js';
 import { miniChart } from './chart.js';
 import { sleepMachine, wakeMachine, openAppSettings } from './host.js';
 import { openNumpad } from './numpad.js';
@@ -566,7 +566,16 @@ export function renderStaticToggle() {
   tog.classList.toggle('is-on', state.staticAxis);
   tog.setAttribute('aria-checked', String(state.staticAxis));
   chart.setConfig({ staticOn: state.staticAxis });
-  if (liveChartRef) liveChartRef.setConfig({ staticOn: state.staticAxis });
+  // STATIC e Y só valem no shot ao vivo
+  if (liveChartRef) liveChartRef.setConfig({ staticOn: state.staticAxis, staticTimer: state.staticTimer });
+}
+
+/** Y do STATIC: ajustado na configuração da skin, gravado no app */
+export function setStaticSeconds(v) {
+  state.staticTimer = clampStaticSeconds(v);
+  if (liveChartRef) liveChartRef.setConfig({ staticTimer: state.staticTimer });
+  savePref('staticSeconds', state.staticTimer);
+  return state.staticTimer;
 }
 
 export function renderAll() {

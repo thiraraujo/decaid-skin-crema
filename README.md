@@ -124,6 +124,16 @@ máquina, e `targetYield` nem aceita).
 
 A interface é toda em inglês.
 
+## Configuração da skin
+
+O ícone de ajustes no topo da home abre **Skin settings**:
+
+- **Live chart** — tempo inicial do eixo X no shot ao vivo com STATIC ligado, em passos de
+  5 s (padrão 40 s, de 5 a 1000 s). Se o shot passar desse tempo, o eixo cresce contínuo.
+  Com STATIC desligado o eixo acompanha o tempo decorrido. STATIC e esse tempo valem só
+  no shot ao vivo; home e histórico usam a duração do perfil/shot.
+- **Colors** — os temas abaixo.
+
 ## Temas de cor
 
 12 paletas (Dark padrão + 11 do handoff `docs/handoff-themes/`), trocadas pelo ícone de

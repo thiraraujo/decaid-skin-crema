@@ -249,11 +249,13 @@ export function createChart(host, opts = {}) {
     node.setAttribute('d', cfg.smooth && !straight ? curvePath(pts) : linePath(pts));
   };
 
+  // Eixo X do shot ao vivo:
+  //   STATIC desligado → acompanha o tempo decorrido (mínimo 5 s);
+  //   STATIC ligado    → começa fixo em Y (config da skin) e, se o shot passar de Y,
+  //                      cresce contínuo junto com o tempo.
   function tMaxLive(elapsed) {
     if (!cfg.staticOn) return Math.max(5, elapsed);
-    let base = Math.max(1, cfg.staticTimer);
-    if (elapsed > base) base = Math.ceil(elapsed / 5) * 5;
-    return base;
+    return Math.max(cfg.staticTimer, elapsed);
   }
 
   function draw() {
