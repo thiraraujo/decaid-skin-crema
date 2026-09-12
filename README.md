@@ -81,6 +81,7 @@ src/
   api.js            cliente REST + WebSocket do ReaPrime + detecção de host
   mock.js           fonte simulada — só sem Bridge, ou com `?mock=1`
   chart.js          gráfico (plan / shot / live) + miniChart()
+  saver.js          proteção de tela do SLEEP (imagens, brilho, troca, toque longo)
   store.js          estado (recipe · profiles · machine · aux · history)
   ui.js             home: receita, réguas, carrossel, rodapé, shot ao vivo
   numpad.js         teclado numérico reutilizável
@@ -147,7 +148,26 @@ O ícone de ajustes no topo da home abre **Skin settings**:
   5 s (padrão 40 s, de 5 a 1000 s). Se o shot passar desse tempo, o eixo cresce contínuo.
   Com STATIC desligado o eixo começa em 0 s e acompanha o tempo decorrido. STATIC e esse tempo valem só
   no shot ao vivo; home e histórico usam a duração do perfil/shot.
+- **Screensaver** — proteção de tela do SLEEP com imagens do tablet (abaixo).
 - **Colors** — os temas abaixo.
+
+## Proteção de tela (Screensaver)
+
+- **Imagens:** *Add images* abre o seletor de arquivos do Android (seleção múltipla). A skin
+  não tem acesso a pastas: o sistema entrega os arquivos só naquele momento. Por isso cada
+  imagem é reduzida à resolução física da tela (CSS px × devicePixelRatio, sem ampliar),
+  comprimida em JPEG até caber no limite de 1 MiB por item do app e **guardada no Decaid**
+  (`/api/v1/store/crema-saver/<id>`). Fotos novas na pasta exigem adicionar de novo.
+  Até 20 imagens; miniaturas e ajustes ficam em `crema/saver`.
+- **Quando aparece:** ligada, com imagens, enquanto a máquina está `sleeping`. Desligada
+  (ou sem imagens), vale o véu de sleep de sempre.
+- **Brilho:** barra vertical 0–100 % (padrão 30 %), aplicada ao tablet por
+  `PUT /api/v1/display/brightness` só enquanto a proteção está na tela; ao sair, volta o
+  brilho de antes. A skin já mantém a tela acesa (wake-lock) o tempo todo.
+- **Troca:** a cada 5 min por padrão, de 1 a 60 min, sem transição; o sleep seguinte
+  continua da próxima imagem.
+- **Toque:** curto mostra *Hold to wake* por 2 s; longo (1 s) acorda a máquina.
+  *Preview* mostra a proteção sem dormir a máquina (toque longo fecha).
 
 ## Temas de cor
 

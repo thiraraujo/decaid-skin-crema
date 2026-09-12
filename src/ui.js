@@ -4,6 +4,7 @@
 import { state, setState, FIELDS, PRESETS, fieldFor, ratioText, clampStaticSeconds } from './store.js';
 import { miniChart } from './chart.js';
 import { sleepMachine, wakeMachine, openAppSettings } from './host.js';
+import { syncSaver } from './saver.js';
 import { openNumpad } from './numpad.js';
 import { openAdjust, openCoffee, openHistory, openThemes } from './screens.js';
 import { openProfiles } from './profiles.js';
@@ -124,6 +125,8 @@ export function renderMachine() {
 
   // dormindo: a tela apaga e qualquer toque acorda a máquina
   $('sleep-veil').hidden = m.readiness !== 'sleeping';
+  // com a proteção de tela ligada (e imagens escolhidas), ela cobre o véu
+  syncSaver();
 
   $('mix-value').textContent = fmt(m.mixTemp, 1);
   $('group-value').textContent = fmt(m.groupTemp, 1);

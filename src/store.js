@@ -29,6 +29,8 @@ export const state = {
   chartMode: 'lastShot',       // 'lastShot' | 'plan' | 'live'
   staticAxis: true,           // vem do app (prefs) no boot
   numpadPrevious: {},         // valores anteriores do teclado, por campo — vem do app
+  // proteção de tela do SLEEP (prefs do app, ver src/saver.js)
+  saver: { on: false, brightness: 30, minutes: 5, images: [] },
   staticTimer: 40,            // STATIC ligado: eixo X do shot ao vivo começa em Y s (prefs do app)
 
   // shot ao vivo
