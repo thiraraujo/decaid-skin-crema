@@ -146,7 +146,7 @@ export function createChart(host, opts = {}) {
   let mode = 'plan';        // 'plan' | 'shot' | 'live'
   let view = null;          // dados estáticos (plan/shot)
   let buffers = null;       // séries ao vivo
-  let livePhases = null;    // fases do perfil ativo, desenhadas durante o shot
+  let livePhases = null;    // fases que JÁ aconteceram no shot ao vivo (src/live.js)
   let dims = null;
   let rafId = null, dirty = false;
 
@@ -196,10 +196,34 @@ export function createChart(host, opts = {}) {
     }
   }
 
-  function renderPhases(phases, tMax) {
+  // `live`: cada fase entra quando acontece — traço vertical no início dela e rótulo
+  // logo à direita do traço, até a próxima fase (a corrente vai até a borda).
+  function renderPhases(phases, tMax, live) {
     gPhases.innerHTML = '';
     phaseLabelsEl.innerHTML = '';
     if (!phases || !phases.length) return;
+    if (live) {
+      phases.forEach((ph, i) => {
+        const x = ph.start / tMax;
+        if (i > 0) {
+          gPhases.appendChild(svgEl('line', {
+            x1: (x * W).toFixed(1), y1: 0, x2: (x * W).toFixed(1), y2: H,
+            stroke: 'var(--grid-phase)', 'stroke-dasharray': '2 5',
+            'vector-effect': 'non-scaling-stroke',
+          }));
+        }
+        const next = phases[i + 1];
+        const wPct = ((next ? next.start / tMax : 1) - x) * 100;
+        const d = document.createElement('div');
+        d.className = 'chart__phase-label chart__phase-label--top chart__phase-label--start';
+        d.style.left = `${x * 100}%`;
+        d.style.maxWidth = `${Math.max(0, wPct)}%`;
+        d.textContent = ph.label;
+        phaseLabelsEl.appendChild(d);
+      });
+      hideCrowdedLabels();
+      return;
+    }
     for (const ph of phases) {
       if (ph.start > 0) {
         const x = (ph.start / tMax * W).toFixed(1);
@@ -228,7 +252,10 @@ export function createChart(host, opts = {}) {
     let prevRight = -Infinity;
     for (const el of items) {
       el.style.visibility = '';
-      const left = el.offsetLeft - el.offsetWidth / 2;
+      const startAnchored = el.classList.contains('chart__phase-label--start');
+      // rótulo espremido numa fase curta vira só reticências: melhor esconder
+      if (startAnchored && el.clientWidth < 28) { el.style.visibility = 'hidden'; continue; }
+      const left = startAnchored ? el.offsetLeft : el.offsetLeft - el.offsetWidth / 2;
       if (left < prevRight + 8) { el.style.visibility = 'hidden'; continue; }
       prevRight = left + el.offsetWidth;
     }
@@ -291,7 +318,7 @@ export function createChart(host, opts = {}) {
         { color: 'var(--amber)', pair: lw, vmax: V_WEIGHT, text: lw ? `${lw[1].toFixed(1)} g` : null },
         { color: 'var(--blue)',  pair: lf, vmax: V_PF,     text: lf ? `${lf[1].toFixed(1)} Flow` : null },
       ], tMax);
-      renderPhases(livePhases, tMax);
+      renderPhases(livePhases, tMax, true);
       renderAxisX(tMax);
       return;
     }
@@ -342,17 +369,16 @@ export function createChart(host, opts = {}) {
       view = shot ? { pressureTarget: null, flowTarget: null, ...shot } : null;
       drawNow();
     },
-    /** entra no modo ao vivo; do `plan` saem só as fases — o tracejado vem do shot */
-    showLive(plan) {
+    /** entra no modo ao vivo; nada é pré-desenhado — tracejado e fases vêm do shot */
+    showLive() {
       mode = 'live';
       setThick(true);
       buffers = null;
-      // rótulo da fase já numerado, como na tela 02 ("1 preinfusion")
-      livePhases = plan && plan.phases && plan.phases.length
-        ? plan.phases.map((ph, i) => ({ ...ph, label: `${i + 1} ${ph.label}` }))
-        : null;
+      livePhases = null;
       schedule();
     },
+    /** fases já ocorridas no shot ao vivo: [{ start, label }] na ordem dos blocos */
+    setLivePhases(list) { livePhases = list && list.length ? list : null; if (mode === 'live') schedule(); },
     update(liveShot) { if (mode !== 'live') return; buffers = liveShot; schedule(); },
     setConfig(next) { Object.assign(cfg, next); if (mode === 'live') schedule(); else drawNow(); },
     resize() { invalidate(); drawNow(); },
