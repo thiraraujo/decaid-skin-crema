@@ -61,6 +61,10 @@ Pressure / Flow por fase). As fases vêm dos steps do perfil; a fase corrente, d
   então a linha é interrompida nesses trechos, conforme o `pump` do step corrente. Shot
   gravado sem esses campos fica sem tracejado. A prévia do perfil na home, antes do shot,
   continua mostrando o plano inteiro.
+- **Fases:** nada é pré-desenhado. Ao vivo, cada fase entra quando a máquina troca de step
+  (`profileFrame`): traço vertical suave no início dela e rótulo no alto, com o mesmo número
+  e nome dos blocos abaixo. No histórico, as fases saem das trocas de `profileFrame`
+  gravadas nas `measurements` (shot antigo sem esse campo usa os tempos do perfil).
 - **Eixo da direita (peso):** escala 0–100 g, sem números.
 
 No histórico, **Apply** copia café, moedor, moagem, dose e drink do shot para a tela

@@ -154,7 +154,7 @@ function paintDetail(s) {
 
   const phases = (s.series && s.series.phases) || [];
   screenEl.querySelector('#hd-phases').innerHTML = phases
-    .map((p, i) => `<span class="phase-pill"><b>${i + 1}</b><span>${esc(p.label)}</span></span>`).join('');
+    .map((p, i) => `<span class="phase-pill"><b>${p.n ?? i + 1}</b><span>${esc(p.label)}</span></span>`).join('');
 
   if (s.series) chart.showShot(s.series);
   else loadSeries(s);

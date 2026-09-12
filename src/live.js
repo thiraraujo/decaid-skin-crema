@@ -72,7 +72,7 @@ export function startLive(profile) {
   current = -1;
   scrolledTo = -1;
   renderLiveHeader(profile);
-  chart.showLive(profile);
+  chart.showLive();
   renderPhases();
 }
 
@@ -118,6 +118,7 @@ export function onLiveSample(m) {
       flowStart: m.flow, flowEnd: m.flow,
     };
     renderPhases();
+    paintChartPhases();
     return;
   }
 
@@ -143,6 +144,12 @@ export function endLive() {
 // frame, sem animação, garante a última fase à vista.
 function scrollToEnd(host) {
   requestAnimationFrame(() => { host.scrollLeft = host.scrollWidth; });
+}
+
+// fases no gráfico: só as que já aconteceram, com o mesmo número e nome dos blocos
+function paintChartPhases() {
+  const started = phases.filter(Boolean).sort((a, b) => a.start - b.start);
+  chart.setLivePhases(started.map((p, i) => ({ start: i === 0 ? 0 : p.start, label: `${p.n} ${p.name}` })));
 }
 
 // ---------- blocos ----------

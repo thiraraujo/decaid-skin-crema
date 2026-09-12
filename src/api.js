@@ -424,6 +424,7 @@ function mapShotMeasurements(shot) {
   const pr = shot.workflow && shot.workflow.profile;
   const pressure = [], flow = [], temp = [], weight = [];
   const pressureTarget = [], flowTarget = [];
+  const realPhases = [];   // trocas de step que aconteceram de fato (profileFrame)
   let hasTargets = false;
   const t0 = tsSeconds(ms[0]);
   for (const m of ms) {
@@ -437,6 +438,17 @@ function mapShotMeasurements(shot) {
     // linha planejada = os alvos que a máquina gravou em cada amostra
     if (mt.targetPressure != null || mt.targetFlow != null) hasTargets = true;
     const pump = pumpAt(pr, mt.profileFrame);
+    if (Number.isInteger(mt.profileFrame)) {
+      const lastPh = realPhases[realPhases.length - 1];
+      if (!lastPh || lastPh.frame !== mt.profileFrame) {
+        if (lastPh) lastPh.end = t;
+        const step = pr && Array.isArray(pr.steps) ? pr.steps[mt.profileFrame] : null;
+        realPhases.push({
+          frame: mt.profileFrame, n: mt.profileFrame + 1, start: realPhases.length ? t : 0, end: t,
+          label: (step && step.name) || `Step ${mt.profileFrame + 1}`,
+        });
+      } else lastPh.end = t;
+    }
     pressureTarget.push([t, activeTarget(mt.targetPressure, 'pressure', pump)]);
     flowTarget.push([t, activeTarget(mt.targetFlow, 'flow', pump)]);
   }
@@ -450,6 +462,7 @@ function mapShotMeasurements(shot) {
     pressure, flow, temp, weight,
     pressureTarget: hasTargets ? pressureTarget : null,
     flowTarget: hasTargets ? flowTarget : null,
-    phases: plan ? plan.phases : [],
+    // fases reais do shot; sem profileFrame gravado, cai nas planejadas do perfil
+    phases: realPhases.length > 1 ? realPhases : (realPhases.length ? [] : (plan ? plan.phases : [])),
   };
 }

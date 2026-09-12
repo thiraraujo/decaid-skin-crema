@@ -28,6 +28,7 @@
 .chart--thick .chart__label { font-size: 16px; }
 .chart--smooth .chart__label { font-size: 16px; }
 .chart__phase-label--top { bottom: auto; top: 0; }
+.chart__phase-label.chart__phase-label--start { transform: none; padding-left: 6px; }
 .chart__phase-label {
   position: absolute; bottom: 4px; transform: translateX(-50%);
   font: 600 11px/1 var(--sans); letter-spacing: .08em;
