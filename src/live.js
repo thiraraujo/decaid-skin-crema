@@ -135,6 +135,14 @@ export function onLiveSample(m) {
 
 export function endLive() {
   if (current >= 0 && phases[current]) renderPhases();
+  const host = $('live-phases');
+  if (host) scrollToEnd(host);
+}
+
+// O rolar suave é cancelado pelo rebuild do DOM dos blocos; rolar no próximo
+// frame, sem animação, garante a última fase à vista.
+function scrollToEnd(host) {
+  requestAnimationFrame(() => { host.scrollLeft = host.scrollWidth; });
 }
 
 // ---------- blocos ----------
@@ -179,8 +187,7 @@ function renderPhases() {
       requestAnimationFrame(() => requestAnimationFrame(() => card.classList.remove('is-entering')));
     }
     scrolledTo = current;
-    // mantém a fase corrente à vista quando passam de 5 blocos
-    host.scrollTo({ left: host.scrollWidth, behavior: 'smooth' });
+    scrollToEnd(host);
   }
 }
 

@@ -12,12 +12,15 @@ Ratio · Brew** e o plano do perfil; durante o shot, **o gráfico toma a tela**.
 
 | Branch | O que é |
 |---|---|
-| `main` | o que a máquina instala hoje — segue na v1 até a v2 ficar pronta |
+| `main` | **a v2** — é o que a máquina instala |
+| `v2` | espelho da `main`, mantido para histórico do redesign |
 | `v1` · tag `v0.2.2` | congelamento da versão anterior ao redesign |
-| `v2` | **este redesign** — instale por aqui para testar na máquina |
 
 Decaid → **Skins → Install from GitHub branch** → `thiraraujo/decaid-skin-crema`,
-branch `v2`. As atualizações chegam por *Check for updates* (ETag).
+branch `main`. As atualizações chegam por *Check for updates* (ETag).
+
+Backup local da v1 publicada: `ipad/backups/` (zip + pasta extraída do commit
+que estava na `main`).
 
 ## Telas
 

@@ -301,6 +301,7 @@ let endTimer = null;
 
 export function onShotStarted() {
   clearTimeout(endTimer);
+  setStopMode('stop');
   state.chartMode = 'live';
   $('home').classList.add('is-live');
   const live = $('live');
@@ -313,19 +314,35 @@ export function onShotSample(m) {
   onLiveSample(m);
 }
 
-// Ao terminar, a tela fica 3s com todos os blocos antes de voltar à home
-// (docs/handoff-shot-live § Comportamento).
+// Ao terminar, a tela do shot FICA — é a hora de ler o que aconteceu. Sai só no
+// toque em FECHAR (que ocupa o lugar do STOP) ou sozinha depois de 1 minuto.
+const LIVE_AUTOCLOSE_MS = 60000;
+
 export function onShotEnded() {
   endLive();
+  setStopMode('close');
   clearTimeout(endTimer);
-  endTimer = setTimeout(() => {
-    const live = $('live');
-    live.classList.remove('is-on');
-    $('home').classList.remove('is-live');
-    setTimeout(() => { live.hidden = true; }, 300);
-    state.chartMode = 'lastShot';
-    renderChart();
-  }, 3000);
+  endTimer = setTimeout(closeLive, LIVE_AUTOCLOSE_MS);
+}
+
+export function closeLive() {
+  clearTimeout(endTimer);
+  endTimer = null;
+  const live = $('live');
+  live.classList.remove('is-on');
+  $('home').classList.remove('is-live');
+  setTimeout(() => { live.hidden = true; }, 300);
+  setStopMode('stop');
+  state.chartMode = 'lastShot';
+  renderChart();
+}
+
+// STOP (durante o shot, vermelho) ↔ FECHAR (depois, neutro)
+function setStopMode(mode) {
+  const btn = $('btn-stop');
+  btn.dataset.mode = mode;
+  btn.classList.toggle('btn-stop--close', mode === 'close');
+  $('btn-stop-label').textContent = mode === 'close' ? 'FECHAR' : 'STOP';
 }
 
 // ================= réguas (drag com snap) =================
@@ -444,7 +461,8 @@ export function initUI(chartInstance, dataSource, liveChart) {
   });
 
   // --- shot ao vivo ---
-  $('btn-stop').addEventListener('click', () => {
+  $('btn-stop').addEventListener('click', (e) => {
+    if (e.currentTarget.dataset.mode === 'close') { closeLive(); return; }
     if (source && source.setMachineState) source.setMachineState('idle');
   });
 
