@@ -79,7 +79,6 @@ async function boot() {
     mc.mixTemp = m.mixTemp;
     mc.groupTemp = m.groupTemp;
     mc.state = m.state || 'ready';   // estado bruto da API; ui.js mapeia p/ a pílula
-    if (m.tankPct != null) { mc.tankPct = m.tankPct; mc.tankMl = m.tankMl; }
     renderMachine();
     if (!m.running) return;
     const s = state.live.series;
@@ -96,9 +95,19 @@ async function boot() {
     });
   });
 
+  // A balança manda frames de STATUS (conexão) e de PESO no mesmo socket.
+  // Só o de peso alimenta a série — senão um status no meio do shot cravava 0 g.
   source.onScale((w) => {
-    state.machine.scale.weight = w.weight;
-    state.machine.scale.connected = w.connected;
+    const sc = state.machine.scale;
+    sc.connected = w.connected;
+    if (w.kind === 'status') {
+      if (!w.connected) { sc.weight = 0; sc.flow = null; sc.battery = null; }
+      renderMachine();
+      return;
+    }
+    sc.weight = w.weight;
+    sc.flow = w.weightFlow;
+    sc.battery = w.battery;
     if (state.live.running) {
       const s = state.live.series;
       const t = s.pressure.length ? s.pressure[s.pressure.length - 1][0] : 0;
@@ -107,6 +116,17 @@ async function boot() {
     }
     renderMachine();
   });
+
+  // nível do tanque — canal próprio, em mm
+  if (source.onWaterLevels) {
+    source.onWaterLevels((w) => {
+      const water = state.machine.water;
+      water.level = w.currentLevel;
+      water.refill = w.refillLevel;
+      if (w.currentLevel != null && w.currentLevel > water.fullScale) water.fullScale = Math.ceil(w.currentLevel);
+      renderMachine();
+    });
+  }
 
   source.onShotStart(() => {
     state.live = { running: true, t: 0, series: { pressure: [], flow: [], temp: [], weight: [] } };
@@ -121,7 +141,8 @@ async function boot() {
 
   // ---------- carga inicial ----------
   if (useBridge) {
-    Object.assign(state.machine, { state: 'disconnected', mixTemp: null, groupTemp: null, tankMl: null, tankPct: null });
+    Object.assign(state.machine, { state: 'disconnected', mixTemp: null, groupTemp: null });
+    state.machine.water.level = null;
     renderMachine();
     if (source.requestWakeLock) source.requestWakeLock();
     source.start();

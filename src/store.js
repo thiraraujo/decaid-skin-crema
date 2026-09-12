@@ -34,8 +34,10 @@ export const state = {
   machine: {
     state: 'disconnected',     // 'ready' | 'heating' | 'disconnected' | estado bruto da DE1
     mixTemp: null, groupTemp: null,
-    tankMl: null, tankPct: null,
-    scale: { connected: false, weight: 0 },
+    // nível do tanque em MILÍMETROS (ws/v1/machine/waterLevels) — a DE1 reporta
+    // altura da água, não volume; `refill` é o limiar de recarga da máquina
+    water: { level: null, refill: null, fullScale: 70 },
+    scale: { connected: false, weight: 0, flow: null, battery: null },
   },
 
   // água quente / vapor / flush

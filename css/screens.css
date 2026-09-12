@@ -432,11 +432,22 @@
 
 .profiles__preview { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .profiles__plot { position: relative; flex: 1; min-height: 0; padding: 20px 16px 0 24px; }
-.profiles__detail { flex: none; padding: 18px 26px 22px; border-top: 1px solid var(--hairline); }
-.profiles__detail-head { align-items: flex-start; gap: 20px; }
-.profiles__name { margin: 0; font: 600 26px/1.2 var(--sans); min-width: 0; }
+/* A faixa de baixo tem altura fixa: as notas do perfil (quando existem) ocupam
+   sempre o mesmo espaço, então a prévia não pula ao trocar de perfil. */
+.profiles__detail {
+  flex: none; height: 168px;
+  padding: 20px 26px 22px; border-top: 1px solid var(--hairline);
+  display: flex; flex-direction: column;
+}
+.profiles__detail-head { align-items: flex-start; gap: 20px; flex: none; }
+.profiles__name { margin: 0; font: 600 28px/1.2 var(--sans); min-width: 0; }
 .profiles__actions { display: flex; gap: 12px; flex: none; }
 .profiles__notes {
-  margin: 10px 0 0; font: 400 15px/1.5 var(--sans); color: var(--text-2);
-  max-height: 66px; overflow: hidden;
+  flex: 1; min-height: 0; margin: 12px 0 0;
+  font: 400 15px/1.55 var(--sans); color: var(--text-2);
+  overflow-y: auto; padding-right: 6px;
+  scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.18) transparent;
 }
+.profiles__notes::-webkit-scrollbar { width: 4px; }
+.profiles__notes::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius: 2px; }
+.profiles__notes:empty::before { content: 'Sem descrição.'; color: var(--muted); }

@@ -77,14 +77,18 @@ Detecção de host em `src/api.js`: `window.REA_HOST` → `localStorage.reaHostn
 | Canal | Uso |
 |---|---|
 | WS `/ws/v1/machine/snapshot` | gráfico ao vivo, Mix/Group, estado da máquina |
-| WS `/ws/v1/scale/snapshot` | peso e status da balança |
+| WS `/ws/v1/scale/snapshot` | peso, fluxo gravimétrico e status da balança |
+| WS `/ws/v1/machine/waterLevels` | nível do tanque (mm) e limiar de recarga |
 | WS `/ws/v1/display` | wake-lock (tela sempre acesa) |
 | `GET /profiles` | carrossel de favoritos e curvas planejadas |
 | `GET /shots` · `GET /shots/{id}` | histórico e curvas do shot |
 | `PUT /shots/{id}` | editar shot passado (`annotations.extras`) |
 | `GET/POST /beans` · `/grinders` | biblioteca Café & Moedor |
 | `PUT /workflow` | dose, drink, café, moedor, moagem, flush, água e vapor |
-| `PUT /machine/state/{state}` | STOP (o shot é disparado pelo GHC) |
+| `PUT /machine/state/{state}` | STOP, Sleep e acordar (o shot é disparado pelo GHC) |
+| `GET /devices` · `PUT /devices/connect` · `GET /devices/scan` | botão CONNECT da balança |
+| `PUT /scale/tare` | botão TARE |
+| `GET /plugins` | descobre o plugin de Settings do app |
 
 A pílula de estado lê `state.state` do snapshot e mapeia o enum `MachineState`:
 `idle` e os estados de trabalho → **READY** (verde), `heating`/`booting`/`preheating` →
@@ -99,12 +103,18 @@ carregado na máquina (café, moedor, moagem, dose, drink, flush, água, vapor e
 perfil) — só depois passa a escrever. Os PUTs são deep-merge do lado do servidor,
 então enviar `hotWaterData: {volume}` preserva `duration` e `flow`.
 
-**Limites conhecidos da API** (`assets/api/rest_v1.yml` do repo do Decaid):
+**Duas specs, não uma.** O REST está em `assets/api/rest_v1.yml` e os WebSockets em
+`assets/api/websocket_v1.yml` (AsyncAPI) — canais e payloads de telemetria só existem
+na segunda. Ler as duas antes de supor qualquer coisa.
 
-- **Nível do tanque não é legível.** `MachineSnapshot` não traz o campo e
-  `/machine/waterLevels` é só `POST` (define o limiar de reabastecimento). A
-  barra do tanque fica vazia com `—` e só acende — em vermelho, com "Encher" —
-  quando o estado da máquina é `needsWater`.
+- **Tanque.** O nível vem por `ws/v1/machine/waterLevels`, em **milímetros**
+  (`currentLevel` + `refillLevel`), não por REST. A skin mostra `NNmm` e acende o
+  aviso quando `currentLevel <= refillLevel`, igual ao app oficial — a conversão
+  mm→ml depende da geometria do tanque e não é informada em lugar nenhum.
+- **Balança.** `ws/v1/scale/snapshot` emite **dois** tipos de frame no mesmo socket:
+  `{status}` (só ao abrir e a cada mudança de conexão) e `{weight, weightFlow,
+  battery, timerValue}` (só enquanto conectada). Tratar os dois como um zera o peso
+  a cada frame de status. O socket fica aberto entre conexões — não reconectar.
 - **A escala do moedor não é informada.** `Grinder` só tem `settingType`
   (`numeric` | `preset`), sem mínimo/máximo. A faixa do Grind assume 0–100 e
   `fieldFor()` a alarga quando a máquina reporta um valor maior.

@@ -3,7 +3,7 @@
 
 import { state, setState, FIELDS, fieldFor, ratioText } from './store.js';
 import { miniChart } from './chart.js';
-import { sleepMachine, openAppSettings } from './host.js';
+import { sleepMachine, wakeMachine, openAppSettings } from './host.js';
 import { openNumpad } from './numpad.js';
 import { openAdjust, openCoffee, openHistory } from './screens.js';
 import { openProfiles } from './profiles.js';
@@ -101,6 +101,9 @@ export function renderMachine() {
   $('state-icon').innerHTML = `<use href="${p.icon}"/>`;
   $('state-label').textContent = STATE_TEXT[m.state] || p.label;
 
+  // dormindo: a tela apaga e qualquer toque acorda a máquina
+  $('sleep-veil').hidden = m.state !== 'sleeping';
+
   $('mix-value').textContent = fmt(m.mixTemp, 1);
   $('group-value').textContent = fmt(m.groupTemp, 1);
 
@@ -109,38 +112,47 @@ export function renderMachine() {
   const st = $('scale-status');
   st.textContent = m.scale.connected ? 'Connected' : 'Disconnected';
   st.classList.toggle('is-connected', m.scale.connected);
-  $('scale-connect').textContent = m.scale.connected ? 'TARE' : 'CONNECT';
+  const connectBtn = $('scale-connect');
+  connectBtn.dataset.restore = m.scale.connected ? 'TARE' : 'CONNECT';
+  if (!connectBtn.dataset.busy && !connectBtn.dataset.flashing) {
+    connectBtn.textContent = connectBtn.dataset.restore;
+  }
 
   renderTank();
 }
 
-// O nível de água NÃO é legível pela API do ReaPrime: MachineSnapshot não traz o
-// campo e /machine/waterLevels é só POST (define o limiar de reabastecimento).
-// O único sinal disponível é o estado `needsWater` — então a barra funciona como
-// aviso de reabastecer, e não como medidor. Com nível conhecido (mock/dev) ela
-// volta a ser medidor.
+// Nível do tanque: a DE1 reporta ALTURA DA ÁGUA em milímetros pelo canal
+// ws/v1/machine/waterLevels (o REST não expõe). O app oficial mostra "NNmm" e
+// acende o aviso quando currentLevel <= refillLevel — fazemos o mesmo, porque a
+// conversão mm→ml depende da geometria do tanque e não é dada por lugar nenhum.
+// A barra usa uma escala cheia de referência que se ajusta se a máquina reportar
+// um nível maior.
 function renderTank() {
-  const { tankPct, tankMl, state: mState } = state.machine;
+  const { water, state: mState } = state.machine;
   const tank = $('tank');
-  const needsWater = mState === 'needsWater';
-  const pct = tankPct == null ? null : Math.max(0, Math.min(100, tankPct));
+  const level = water.level;
+  const needsWater = mState === 'needsWater'
+    || (level != null && water.refill != null && level <= water.refill);
 
-  tank.classList.toggle('is-unknown', pct == null && !needsWater);
+  tank.classList.toggle('is-unknown', level == null && !needsWater);
   tank.classList.toggle('is-refill', needsWater);
 
-  if (needsWater && pct == null) {
-    $('tank-fill').style.height = '6%';
-    $('tank-pct').style.bottom = '6%';
-    $('tank-pct').textContent = '!';
-    $('tank-ml').textContent = 'Encher';
+  if (level == null) {
+    $('tank-fill').style.height = needsWater ? '6%' : '0';
+    $('tank-pct').style.bottom = needsWater ? '6%' : '0';
+    $('tank-pct').textContent = needsWater ? '!' : DASH;
+    $('tank-ml').textContent = needsWater ? 'Encher' : DASH;
+    tank.classList.remove('is-low', 'is-critical');
     return;
   }
-  $('tank-fill').style.height = `${pct ?? 0}%`;
-  $('tank-pct').style.bottom = `${pct ?? 0}%`;
-  $('tank-pct').textContent = pct == null ? DASH : `${Math.round(pct)}%`;
-  valueWithUnit($('tank-ml'), tankMl == null ? DASH : String(Math.round(tankMl)), ' ml');
-  tank.classList.toggle('is-low', pct != null && pct < 20 && pct >= 10);
-  tank.classList.toggle('is-critical', pct != null && pct < 10);
+
+  const pct = Math.max(0, Math.min(100, (level / water.fullScale) * 100));
+  $('tank-fill').style.height = `${pct}%`;
+  $('tank-pct').style.bottom = `${pct}%`;
+  $('tank-pct').textContent = `${Math.round(level)}`;
+  valueWithUnit($('tank-ml'), String(Math.round(level)), ' mm');
+  tank.classList.toggle('is-low', !needsWater && pct < 25);
+  tank.classList.remove('is-critical');
 }
 
 // ================= carrossel de favoritos =================
@@ -383,7 +395,11 @@ export function initUI(chartInstance, dataSource, liveChart) {
 
   // --- topo ---
   $('btn-sleep').addEventListener('click', () => sleepMachine());
-  $('btn-settings').addEventListener('click', () => openAppSettings());
+  $('sleep-veil').addEventListener('click', () => wakeMachine());
+  $('btn-settings').addEventListener('click', async () => {
+    const ok = await openAppSettings();
+    if (!ok) flash($('btn-settings'), 'indisponível');
+  });
   $('edit-favorites').addEventListener('click', () => openProfiles());
 
   // --- carrossel ---
@@ -403,10 +419,23 @@ export function initUI(chartInstance, dataSource, liveChart) {
   $('shot-prev').addEventListener('click', () => stepShot(+1));
   $('shot-next').addEventListener('click', () => stepShot(-1));
   $('lastshot-body').addEventListener('click', () => openHistory(state.history[state.shotIndex]));
-  $('scale-connect').addEventListener('click', () => {
+  // CONNECT força a conexão BT na hora (api.js: /devices/connect, com scan de
+  // reserva). Enquanto isso o botão mostra o progresso — o scan pode demorar.
+  $('scale-connect').addEventListener('click', async () => {
     if (!source) return;
-    if (state.machine.scale.connected) source.tareScale && source.tareScale();
-    else source.connectScale && source.connectScale();
+    const btn = $('scale-connect');
+    if (state.machine.scale.connected) {
+      if (source.tareScale) await source.tareScale();
+      flash(btn, 'TARADO');
+      return;
+    }
+    if (!source.connectScale || btn.dataset.busy) return;
+    btn.dataset.busy = '1';
+    btn.textContent = 'BUSCANDO…';
+    const ok = await source.connectScale();
+    delete btn.dataset.busy;
+    if (!state.machine.scale.connected) flash(btn, ok ? 'SEM BALANÇA' : 'FALHOU');
+    else renderMachine();
   });
 
   // --- shot ao vivo ---
@@ -469,6 +498,20 @@ export function setBrew(v) {
   state.recipe.brewTemp = v;
   renderRecipe();
   pushBrewTemp(currentProfile());
+}
+
+// feedback curto no próprio botão quando a ação não pôde ser executada
+function flash(btn, text) {
+  if (btn.dataset.flashing) return;
+  const original = btn.dataset.restore || btn.innerHTML;
+  btn.dataset.flashing = '1';
+  btn.textContent = text;
+  btn.classList.add('is-warn');
+  setTimeout(() => {
+    btn.innerHTML = original;
+    btn.classList.remove('is-warn');
+    delete btn.dataset.flashing;
+  }, 1600);
 }
 
 export function renderAll() {

@@ -40,18 +40,60 @@ const PROFILES = [
       { start: 16, end: 20, label: 'dripping' }, { start: 20, end: 26, label: 'pressurize' },
       { start: 26, end: 49, label: 'extraction' }, { start: 49, end: 59, label: 'decline' },
     ],
-    raw: { title: 'Rao Allongé', tank_temperature: 88, steps: SIM_STEPS } },
-  { key: 'best-practice', id: 'best-practice', name: 'Best practice', duration: 32,
+    raw: { title: 'Rao Allongé', tank_temperature: 88, steps: SIM_STEPS,
+      notes: 'Allongé no estilo Scott Rao: preinfusão longa a baixa pressão e declínio suave, para uma bebida mais diluída e doce.' } },
+  { key: 'best-practice', id: 'best-practice', name: 'Best practice (light roast)', duration: 32,
     pressure: [[0,0],[3,2.5],[9,3],[10,9],[16,9],[32,8]], flow: [[0,3],[9,3],[10,2],[32,1.9]], temp: [[0,94.5],[32,94.5]],
-    phases: [{ start: 0, end: 10, label: 'preinfusion' }, { start: 10, end: 32, label: 'extraction' }] },
+    phases: [{ start: 0, end: 10, label: 'preinfusion' }, { start: 10, end: 32, label: 'extraction' }],
+    raw: { title: 'Best practice (light roast)', notes: 'Ponto de partida para torras claras: temperatura alta e 9 bar estáveis.' } },
   { key: 'default', id: 'default', name: 'Default', duration: 30,
     pressure: [[0,0],[2,2],[8,3],[10,3],[11,9],[18,9],[30,7.5]], flow: [[0,2.5],[8,2.5],[11,2],[30,1.8]], temp: [[0,92],[30,92]],
-    phases: [{ start: 0, end: 10, label: 'preinfusion' }, { start: 10, end: 30, label: 'extraction' }] },
+    phases: [{ start: 0, end: 10, label: 'preinfusion' }, { start: 10, end: 30, label: 'extraction' }],
+    raw: { title: 'Default', notes: 'This profile is gentle on the coffee puck and not too demanding on the barista. Produces a very acceptable espresso in a wide variety of settings.' } },
   { key: 'espresso-80', id: 'espresso-80', name: "80's Espresso", duration: 28,
-    pressure: [[0,0],[3,9],[28,9]], flow: null, temp: [[0,93],[28,93]], phases: [] },
+    pressure: [[0,0],[3,9],[28,9]], flow: null, temp: [[0,93],[28,93]], phases: [],
+    raw: { title: "80's Espresso", notes: 'Máquina de mola dos anos 80: sobe a 9 bar e segura até o fim.' } },
   { key: 'gentle', id: 'gentle', name: 'Gentle and sweet', duration: 35,
     pressure: [[0,0],[6,2],[10,6],[35,5]], flow: [[0,3],[6,3],[10,2],[35,1.8]], temp: [[0,88],[35,88]],
-    phases: [{ start: 0, end: 10, label: 'preinfusion' }, { start: 10, end: 35, label: 'extraction' }] },
+    phases: [{ start: 0, end: 10, label: 'preinfusion' }, { start: 10, end: 35, label: 'extraction' }],
+    raw: { title: 'Gentle and sweet', notes: 'Pressão baixa do começo ao fim, para realçar doçura em torras médias.' } },
+
+  // Perfis com CATEGORIA no título ("Categoria/Nome"), como o Decaid escreve —
+  // é daí que a tela de Perfis monta os filtros. Sem isso o mock enganava.
+  { key: 'v60-22', id: 'v60-22', name: 'Pour over basket/V60 22g in, 375g out', duration: 180,
+    pressure: [[0,0],[180,0]], flow: [[0,4],[10,4],[10,2.5],[180,2.5]], temp: [[0,92],[180,92]],
+    phases: [{ start: 0, end: 10, label: 'bloom' }, { start: 10, end: 180, label: 'pour' }],
+    raw: { title: 'Pour over basket/V60 22g in, 375g out', notes: 'Requer a cesta de pour over. 22 g de café moído grosso para 375 g de bebida.' } },
+  { key: 'v60-15', id: 'v60-15', name: 'Pour over basket/V60 15g in, 250g out', duration: 150,
+    pressure: [[0,0],[150,0]], flow: [[0,3.5],[10,3.5],[10,2.2],[150,2.2]], temp: [[0,92],[150,92]],
+    phases: [{ start: 0, end: 10, label: 'bloom' }, { start: 10, end: 150, label: 'pour' }],
+    raw: { title: 'Pour over basket/V60 15g in, 250g out', notes: 'Versão menor da receita de V60.' } },
+  { key: 'tea-black', id: 'tea-black', name: 'Tea portafilter/black tea', duration: 178,
+    pressure: [[0,0],[178,0]], flow: [[0,6],[8,6],[8,0],[178,0]], temp: [[0,99],[178,99]],
+    phases: [{ start: 0, end: 8, label: 'fill' }, { start: 8, end: 178, label: 'infuse' }],
+    raw: { title: 'Tea portafilter/black tea', notes: 'Requer o portafiltro de chá. Água a 99 °C e infusão longa.' } },
+  { key: 'tea-green', id: 'tea-green', name: 'Tea portafilter/Japanese green', duration: 120,
+    pressure: [[0,0],[120,0]], flow: [[0,6],[8,6],[8,0],[120,0]], temp: [[0,80],[120,80]],
+    phases: [{ start: 0, end: 8, label: 'fill' }, { start: 8, end: 120, label: 'infuse' }],
+    raw: { title: 'Tea portafilter/Japanese green', notes: 'Chá verde japonês: água mais fria, infusão curta.' } },
+  { key: 'ghc-flow', id: 'ghc-flow', name: 'GHC/manual flow control', duration: 60,
+    pressure: [[0,0],[60,6]], flow: [[0,2],[60,2]], temp: [[0,92],[60,92]], phases: [],
+    raw: { title: 'GHC/manual flow control', notes: 'Controle manual de fluxo pelo botão físico da máquina.' } },
+  { key: 'dflow', id: 'dflow', name: 'D-Flow / default', duration: 40,
+    pressure: [[0,0],[8,3],[12,8],[40,7]], flow: [[0,4],[8,4],[12,2],[40,2]], temp: [[0,90],[40,90]],
+    phases: [{ start: 0, end: 12, label: 'preinfusion' }, { start: 12, end: 40, label: 'extraction' }],
+    raw: { title: 'D-Flow / default', notes: '' } },
+  { key: 'aflow-medium', id: 'aflow-medium', name: 'A-Flow / default-medium', duration: 38,
+    pressure: [[0,0],[8,3],[12,8.5],[38,7.5]], flow: [[0,4.5],[8,4.5],[12,2.1],[38,2.1]], temp: [[0,91],[38,91]],
+    phases: [{ start: 0, end: 12, label: 'preinfusion' }, { start: 12, end: 38, label: 'extraction' }],
+    raw: { title: 'A-Flow / default-medium', notes: 'Perfil adaptativo de fluxo para torras médias.' } },
+  { key: 'cleaning', id: 'cleaning', name: 'Cleaning/Forward Flush x5', duration: 50,
+    pressure: [[0,0],[50,0]], flow: [[0,8],[50,8]], temp: [[0,90],[50,90]], phases: [],
+    raw: { title: 'Cleaning/Forward Flush x5', notes: 'Cinco descargas seguidas para limpar o grupo. Sem café no portafiltro.' } },
+  { key: 'londonium', id: 'londonium', name: 'Londonium', duration: 36, hidden: true,
+    pressure: [[0,0],[4,9],[10,9],[36,4]], flow: null, temp: [[0,90],[36,90]],
+    phases: [{ start: 0, end: 10, label: 'ramp' }, { start: 10, end: 36, label: 'decline' }],
+    raw: { title: 'Londonium', notes: 'Alavanca com mola: sobe rápido a 9 bar e declina até o fim.' } },
 ];
 
 const BEANS = [
@@ -117,22 +159,25 @@ export function createMockSource() {
   const startCbs = new Set();
   const endCbs = new Set();
   let shotTimer = null, idleTimer = null, t = 0;
+  const waterCbs = new Set();
   let scaleConnected = false, tareOffset = 0;
-  let tankPct = 36;
+  let waterLevel = 42;   // mm, como a DE1 reporta
 
   function emitIdle() {
     for (const cb of snapshotCbs) {
-      cb({ t: 0, running: false, state: 'idle', frame: null, pressure: 0, flow: 0, mixTemp: 92.0, groupTemp: 92.0, temp: 92.0, tankPct, tankMl: Math.round(tankPct * 14.9) });
+      cb({ t: 0, running: false, state: 'idle', frame: null, pressure: 0, flow: 0, mixTemp: 92.0, groupTemp: 92.0, temp: 92.0 });
     }
   }
 
   function tick() {
     t += TICK_MS / 1000;
     for (const cb of snapshotCbs) {
-      cb({ t, running: true, state: 'espresso', frame: simFrame(t), pressure: sample(P, t), flow: sample(F, t), mixTemp: 92.4, groupTemp: 94.1, temp: sample(T, t), tankPct, tankMl: Math.round(tankPct * 14.9) });
+      cb({ t, running: true, state: 'espresso', frame: simFrame(t), pressure: sample(P, t), flow: sample(F, t), mixTemp: 92.4, groupTemp: 94.1, temp: sample(T, t) });
     }
-    const weight = scaleConnected ? Math.max(0, sample(W, t) - tareOffset) : 0;
-    for (const cb of scaleCbs) cb({ weight, connected: scaleConnected });
+    if (scaleConnected) {
+      const weight = Math.max(0, sample(W, t) - tareOffset);
+      for (const cb of scaleCbs) cb({ kind: 'weight', connected: true, weight, weightFlow: null, battery: 78 });
+    }
     if (t >= T_MAX) { stopShot(); for (const cb of endCbs) cb(); }
   }
 
@@ -148,11 +193,17 @@ export function createMockSource() {
     kind: 'mock',
     onSnapshot(cb) { snapshotCbs.add(cb); return () => snapshotCbs.delete(cb); },
     onScale(cb) { scaleCbs.add(cb); return () => scaleCbs.delete(cb); },
+    onWaterLevels(cb) { waterCbs.add(cb); return () => waterCbs.delete(cb); },
     onShotStart(cb) { startCbs.add(cb); return () => startCbs.delete(cb); },
     onShotEnd(cb) { endCbs.add(cb); return () => endCbs.delete(cb); },
 
     // no mock a máquina fica ociosa; o shot é disparado por `simShot()` (console/dev)
-    start() { emitIdle(); idleTimer = setInterval(emitIdle, 1000); },
+    start() {
+      emitIdle();
+      for (const cb of waterCbs) cb({ currentLevel: waterLevel, refillLevel: 5 });
+      for (const cb of scaleCbs) cb({ kind: 'status', connected: scaleConnected });
+      idleTimer = setInterval(emitIdle, 1000);
+    },
     stop() { stopShot(); clearInterval(idleTimer); },
     simShot: startShot,
 
@@ -191,7 +242,13 @@ export function createMockSource() {
       };
     },
 
-    connectScale() { scaleConnected = true; tareOffset = 0; },
+    async connectScale() {
+      await new Promise((r) => setTimeout(r, 900));   // o scan real demora
+      scaleConnected = true; tareOffset = 0;
+      for (const cb of scaleCbs) cb({ kind: 'status', connected: true });
+      return true;
+    },
+    getDevices: async () => [{ id: 'MockScale', name: 'Mock Scale', type: 'scale', state: scaleConnected ? 'connected' : 'disconnected', available: true }],
     tareScale() { tareOffset = sample(W, t); },
     setMachineState(s) { if (s === 'idle') { stopShot(); for (const cb of endCbs) cb(); } },
 

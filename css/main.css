@@ -331,6 +331,21 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .tank.is-refill .tank__ml { color: var(--red); font-size: 13px; }
 .tank.is-refill .tank__tube { box-shadow: 0 0 0 1px rgba(240,106,74,.45); }
 
+/* ---------- máquina dormindo ---------- */
+.sleep-veil {
+  position: absolute; inset: 0; z-index: 60;
+  background: rgba(15,17,19,.94);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  color: var(--muted);
+  animation: veil-in .3s ease-out;
+}
+@keyframes veil-in { from { opacity: 0; } }
+.sleep-veil__icon { color: var(--blue); opacity: .5; }
+.sleep-veil__title { font: 600 13px var(--sans); letter-spacing: .2em; text-transform: uppercase; color: var(--text-2); }
+.sleep-veil__hint { font: 500 15px var(--sans); color: var(--muted); }
+
+.pill.is-warn { color: var(--amber); border-color: rgba(240,163,95,.5); }
+
 /* ======================= 02 · SHOT AO VIVO ======================= */
 /* Tela própria (docs/handoff-shot-live): cabeçalho com a receita em leitura,
    gráfico como herói e um bloco por fase do perfil aparecendo conforme o shot anda. */

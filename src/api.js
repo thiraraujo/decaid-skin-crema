@@ -40,6 +40,7 @@ export function createApiSource() {
   const scaleCbs = new Set();
   const startCbs = new Set();
   const endCbs = new Set();
+  const waterCbs = new Set();
   const sockets = [];
 
   // ciclo de vida do shot, derivado do estado da máquina.
@@ -63,6 +64,7 @@ export function createApiSource() {
 
     onSnapshot(cb) { snapshotCbs.add(cb); return () => snapshotCbs.delete(cb); },
     onScale(cb) { scaleCbs.add(cb); return () => scaleCbs.delete(cb); },
+    onWaterLevels(cb) { waterCbs.add(cb); return () => waterCbs.delete(cb); },
     onShotStart(cb) { startCbs.add(cb); return () => startCbs.delete(cb); },
     onShotEnd(cb) { endCbs.add(cb); return () => endCbs.delete(cb); },
 
@@ -92,13 +94,35 @@ export function createApiSource() {
           });
         }
       });
-      // /scale/snapshot: peso + {"status":"connected|disconnected"}
+      // /scale/snapshot emite DOIS tipos de frame (websocket_v1.yml):
+      //   ScaleStatus   {"status":"connected"|"disconnected"} — ao abrir e a cada
+      //                 mudança de estado de conexão;
+      //   ScaleSnapshot {timestamp, weight, weightFlow, battery, timerValue} — só
+      //                 enquanto há balança conectada.
+      // Tratar os dois como um só zerava o peso a cada frame de status.
+      // O socket fica aberto entre conexões: não reconectar quando cai.
       openWS('/scale/snapshot', (m) => {
+        if (typeof m.status === 'string') {
+          for (const cb of scaleCbs) cb({ kind: 'status', connected: m.status === 'connected' });
+          return;
+        }
+        if (m.weight == null) return;
         for (const cb of scaleCbs) {
           cb({
-            weight: m.weight ?? 0,
-            connected: m.status ? m.status === 'connected' : true,
+            kind: 'weight',
+            connected: true,
+            weight: m.weight,
+            weightFlow: m.weightFlow ?? null,
+            battery: m.battery ?? null,
           });
+        }
+      });
+
+      // /machine/waterLevels: nível do tanque em MILÍMETROS + limiar de recarga.
+      // (o REST não expõe isso — só este canal; ver websocket_v1.yml)
+      openWS('/machine/waterLevels', (m) => {
+        for (const cb of waterCbs) {
+          cb({ currentLevel: m.currentLevel ?? null, refillLevel: m.refillLevel ?? null });
         }
       });
     },
@@ -133,10 +157,29 @@ export function createApiSource() {
       return fetch(`${httpBase}/api/v1/machine/info`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
     },
 
-    // balança: força scan/conexão BT · zera (tare) a balança conectada
-    connectScale() {
-      return fetch(`${httpBase}/api/v1/devices/scan?connect=true&quick=false`)
-        .catch((e) => console.warn('[CREMA] falha ao conectar balança', e));
+    // Balança: o botão CONNECT força a conexão BT na hora.
+    // Se a balança já é conhecida (apareceu num scan anterior), PUT /devices/connect
+    // conecta direto; senão, /devices/scan?connect=true varre e preenche o slot.
+    getDevices() {
+      return fetch(`${httpBase}/api/v1/devices`)
+        .then((r) => (r.ok ? r.json() : []))
+        .then((a) => (Array.isArray(a) ? a : []))
+        .catch(() => []);
+    },
+    async connectScale() {
+      const devices = await this.getDevices();
+      const scale = devices.find((d) => d.type === 'scale' && d.state !== 'connected');
+      if (scale) {
+        const r = await fetch(`${httpBase}/api/v1/devices/connect`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ deviceId: scale.id }),
+        }).catch((e) => { console.warn('[CREMA] falha ao conectar balança', e); return null; });
+        if (r && r.ok) return true;
+        console.warn('[CREMA] /devices/connect falhou', r && r.status, '— caindo no scan');
+      }
+      const r = await fetch(`${httpBase}/api/v1/devices/scan?connect=true&quick=false`)
+        .catch((e) => { console.warn('[CREMA] falha no scan de dispositivos', e); return null; });
+      return !!(r && r.ok);
     },
     tareScale() {
       return fetch(`${httpBase}/api/v1/scale/tare`, { method: 'PUT' })
