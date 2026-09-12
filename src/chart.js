@@ -204,7 +204,7 @@ export function createChart(host, opts = {}) {
         const x = (ph.start / tMax * W).toFixed(1);
         gPhases.appendChild(svgEl('line', {
           x1: x, y1: 0, x2: x, y2: H,
-          stroke: 'rgba(255,255,255,.14)', 'stroke-dasharray': '2 5',
+          stroke: 'var(--grid-phase)', 'stroke-dasharray': '2 5',
           'vector-effect': 'non-scaling-stroke',
         }));
       }

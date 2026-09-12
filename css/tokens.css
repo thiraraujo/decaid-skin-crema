@@ -24,8 +24,15 @@
 }
 
 :root {
+  /* ------------------------------------------------------------------
+     CORES — todas são tokens trocáveis por tema (css/themes.css).
+     Os valores abaixo são o tema Escuro (padrão). O layout nunca muda com
+     o tema; só estas variáveis.
+     ------------------------------------------------------------------ */
+
   /* superfícies */
   --bg:          #0F1113;
+  --bg-rgb:      15,17,19;
   --surface:     #16191C;
   --surface-2:   #1B1F23;
 
@@ -34,29 +41,44 @@
   --text-2:      #C5CACF;   /* secundário */
   --label:       #7E858C;   /* rótulos .lb */
   --muted:       #6B7178;   /* apagado (eixos, fases) */
-  --text-blue:   #D5E0F2;   /* valores sobre superfície azulada */
+  --text-blue:   #D5E0F2;   /* valores da faixa da máquina (água, vapor, flush, mix/group) */
   --on-blue:     #0F1113;   /* texto sobre botão azul cheio */
 
-  /* acentos */
-  --blue:        #5BB0F5;
-  --green:       #5FD98E;
-  --red:         #F06A4A;
-  --amber:       #F0A35F;
+  /* acentos: cor sólida + rgb para preenchimentos translúcidos */
+  --blue:        #5BB0F5;   --blue-rgb:  91,176,245;   --blue-soft:  #7CC4FF;
+  --green:       #5FD98E;   --green-rgb: 95,217,142;
+  --red:         #F06A4A;   --red-rgb:   240,106,74;   --red-soft:   #FF9C80;
+  --amber:       #F0A35F;   --amber-rgb: 240,163,95;   --amber-soft: #FFD1A0;
 
-  /* linhas / bordas */
-  --hairline:    rgba(255,255,255,.08);  /* filete */
-  --border-soft: rgba(255,255,255,.10);  /* balão */
-  --divider:     rgba(255,255,255,.12);  /* divisor forte */
-  --border:      rgba(255,255,255,.14);  /* pílula */
+  /* linhas: uma cor base + escala de opacidade (temas claros engrossam a escala) */
+  --line-rgb:    255,255,255;
+  --a06: .06; --a08: .08; --a10: .10; --a12: .12; --a14: .14;
+  --a18: .18; --a20: .2;  --a22: .22; --a30: .3;  --a45: .45;
+
+  --hairline:    rgba(var(--line-rgb), var(--a08));  /* filete */
+  --border-soft: rgba(var(--line-rgb), var(--a10));  /* balão */
+  --divider:     rgba(var(--line-rgb), var(--a12));  /* divisor forte */
+  --border:      rgba(var(--line-rgb), var(--a14));  /* pílula */
+  --press:       rgba(var(--line-rgb), var(--a06));  /* estado pressionado */
   --grid-line:   rgba(255,255,255,.06);
   --grid-base:   rgba(255,255,255,.12);
+  --grid-phase:  rgba(255,255,255,.14);
+  --chart-ink:   #6B7178;   /* números dos eixos */
 
   /* seleção */
-  --sel-fill:    rgba(91,176,245,.12);
-  --sel-border:  rgba(91,176,245,.5);
+  --sel-fill:    rgba(var(--blue-rgb), .12);
+  --sel-border:  rgba(var(--blue-rgb), .5);
 
-  /* carrossel: card de perfil selecionado */
+  /* carrossel: card de perfil selecionado (igual em todos os temas) */
   --profile-card: linear-gradient(160deg, #2F86D8, #1C56A6);
+  --toggle-on:   #2F86D8;
+  --on-profile-accent: #5FD98E;   /* "Remove" sobre o gradiente do perfil ativo */
+  --on-profile-text:   #C5CACF;   /* setas ↑↓ sobre o gradiente */
+
+  /* miúdos */
+  --pill-num:     rgba(120,160,230,.2);     /* círculo numerado das fases */
+  --shade:        rgba(0,0,0,.18);          /* faixa escurecida (card de favorito) */
+  --label-shadow: 0 1px 6px rgba(15,17,19,.9);  /* rótulo na ponta das séries */
 
   /* tipografia */
   --sans: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
@@ -71,7 +93,8 @@
   --r-key:   16px;
 
   /* sombras */
-  --shadow-card:  0 10px 30px rgba(0,0,0,.35);
-  --shadow-modal: 0 30px 80px rgba(0,0,0,.6);
-  --scrim:        rgba(0,0,0,.55);
+  --shadow-card:    0 10px 30px rgba(0,0,0,.35);
+  --shadow-modal:   0 30px 80px rgba(0,0,0,.6);
+  --shadow-profile: 0 24px 60px rgba(0,0,0,.55);
+  --scrim:          rgba(0,0,0,.55);
 }

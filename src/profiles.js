@@ -56,7 +56,7 @@ function build() {
       <aside class="profiles__favs">
         <div class="row profiles__favs-head">
           <span class="lb">Favourites</span>
-          <span class="lb lb--muted" id="pf-favcount"></span>
+          <span class="lb" id="pf-favcount"></span>
         </div>
         <div class="profiles__favs-list" id="pf-favs"></div>
         <p class="profiles__favs-hint" id="pf-favhint" hidden>Carousel is full: remove a favourite to add another. <b>Use</b> replaces the last one.</p>

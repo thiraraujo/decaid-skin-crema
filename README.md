@@ -117,6 +117,21 @@ máquina, e `targetYield` nem aceita).
 
 A interface é toda em inglês.
 
+## Temas de cor
+
+12 paletas (Dark padrão + 11 do handoff `docs/handoff-themes/`), trocadas pelo ícone de
+ajustes no topo da home — só ícone, sem texto. **Só as cores mudam; o layout é o mesmo.**
+
+- Todas as cores da skin são variáveis em `css/tokens.css` (valores = tema Dark).
+- `css/themes.css` e `src/themes-data.js` são **gerados** por `tools/build-themes.py` a
+  partir da tabela do handoff. Para ajustar uma paleta, edite o script e rode
+  `python3 tools/build-themes.py`.
+- Temas claros usam os acentos escuros do handoff e escalam a opacidade das linhas.
+- "Paper · dark cards": fundo papel com os balões (cards, modais, teclas, painéis) como
+  ilhas escuras — só elementos com fundo de superfície, para o texto não sumir.
+- O tema escolhido fica no key-value store do app (`/api/v1/store/crema/theme`), que
+  sobrevive a reinstalar a skin, com cache em localStorage aplicado já no `<head>`.
+
 Ao abrir, a skin **lê** `GET /workflow` e monta a receita a partir do que já está
 carregado na máquina (café, moedor, moagem, dose, drink, flush, água, vapor e
 perfil) — só depois passa a escrever. Os PUTs são deep-merge do lado do servidor,

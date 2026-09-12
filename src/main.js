@@ -10,6 +10,7 @@ import { initWorkflow, baseTempOf } from './workflow.js';
 import { initHistory } from './history.js';
 import { initLive } from './live.js';
 import { createReadinessTracker } from './readiness.js';
+import { loadThemeFromHost } from './theme.js';
 import {
   initUI, renderAll, renderMachine, renderCarousel, renderLastShot, renderChart,
   onShotStarted, onShotSample, onShotEnded, selectProfile,
@@ -132,6 +133,7 @@ async function boot() {
   const useBridge = forceMock ? false : await detectHost();
   const source = useBridge ? createApiSource() : createMockSource();
   setState({ hostConnected: useBridge });
+  loadThemeFromHost();   // tema salvo no app (sobrevive a reinstalar a skin)
   console.info(`[CREMA v2] fonte: ${source.kind}`);
 
   initWorkflow(source);
