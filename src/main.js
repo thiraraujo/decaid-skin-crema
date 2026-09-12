@@ -9,22 +9,91 @@ import { initProfiles } from './profiles.js';
 import { initWorkflow, baseTempOf } from './workflow.js';
 import { initHistory } from './history.js';
 import { initLive } from './live.js';
+import { createReadinessTracker } from './readiness.js';
 import {
   initUI, renderAll, renderMachine, renderCarousel, renderLastShot, renderChart,
   onShotStarted, onShotSample, onShotEnded, selectProfile,
 } from './ui.js';
 
-// canvas fixo 1320×800 escalado para a tela real (independe de dpr)
+// O canvas é fixo em 1320×800 e escalado para caber na tela real.
+//
+// `window.innerWidth/innerHeight` NÃO são confiáveis dentro da WebView do
+// Decaid: podem reportar uma área maior que a realmente visível (barras do
+// sistema, insets, zoom próprio da WebView) e a tela vaza pelas bordas. Medimos
+// por três fontes e ficamos com a MENOR — assim nunca escapa do visível.
+const CANVAS_W = 1320;
+const CANVAS_H = 800;
+
+function viewportSize() {
+  const doc = document.documentElement;
+  const vv = window.visualViewport;
+  const probe = document.getElementById('vp-probe');
+  const box = probe ? probe.getBoundingClientRect() : null;
+  const widths = [doc && doc.clientWidth, vv && vv.width, window.innerWidth, box && box.width];
+  const heights = [doc && doc.clientHeight, vv && vv.height, window.innerHeight, box && box.height];
+  const pick = (list) => Math.min(...list.filter((n) => typeof n === 'number' && n > 0));
+  return { w: pick(widths), h: pick(heights) };
+}
+
 function fitApp() {
   const el = document.querySelector('.app');
   if (!el) return;
-  el.style.transform = `scale(${Math.min(window.innerWidth / 1320, window.innerHeight / 800)})`;
+  const { w, h } = viewportSize();
+  if (!isFinite(w) || !isFinite(h)) return;
+  const s = Math.min(w / CANVAS_W, h / CANVAS_H);
+  // sobra distribuída dos dois lados: a skin fica centrada, sem encostar na borda
+  const x = Math.max(0, (w - CANVAS_W * s) / 2);
+  const y = Math.max(0, (h - CANVAS_H * s) / 2);
+  el.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) scale(${s})`;
+  document.documentElement.style.setProperty('--app-scale', s.toFixed(4));
+  paintDiag();
 }
+
+// `?diag=1` mostra num canto o que a WebView reporta e a escala aplicada —
+// serve para diagnosticar layout cortado direto no tablet, sem console.
+const DIAG = new URLSearchParams(location.search).get('diag') === '1';
+let diagEl = null;
+function paintDiag() {
+  if (!DIAG) return;
+  if (!diagEl) {
+    diagEl = document.createElement('div');
+    diagEl.id = 'vp-diag';
+    document.body.appendChild(diagEl);
+  }
+  const doc = document.documentElement;
+  const vv = window.visualViewport;
+  const probe = document.getElementById('vp-probe');
+  const box = probe ? probe.getBoundingClientRect() : null;
+  const { w, h } = viewportSize();
+  diagEl.textContent = [
+    `doc ${doc.clientWidth}x${doc.clientHeight}`,
+    vv ? `visual ${Math.round(vv.width)}x${Math.round(vv.height)}` : 'visual —',
+    `inner ${window.innerWidth}x${window.innerHeight}`,
+    box ? `probe ${Math.round(box.width)}x${Math.round(box.height)}` : 'probe —',
+    `usado ${Math.round(w)}x${Math.round(h)}`,
+    `escala ${(Math.min(w / CANVAS_W, h / CANVAS_H)).toFixed(3)}`,
+    `dpr ${window.devicePixelRatio}`,
+  ].join('  ·  ');
+}
+
 fitApp();
+paintDiag();
 window.addEventListener('resize', fitApp);
 window.addEventListener('orientationchange', fitApp);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', fitApp);
+  window.visualViewport.addEventListener('scroll', fitApp);
+}
+// a WebView às vezes só estabiliza o tamanho depois do primeiro paint
+window.addEventListener('load', fitApp);
+requestAnimationFrame(fitApp);
+setTimeout(fitApp, 300);
+if (typeof ResizeObserver !== 'undefined') {
+  const probe = document.getElementById('vp-probe');
+  if (probe) new ResizeObserver(fitApp).observe(probe);
+}
 
-// "Hoje 14:40" · "Ontem 09:12" · "11/09 · 18:31"
+// "Today 14:40" · "Yesterday 09:12" · "11/09 · 18:31"
 function whenLabel(at) {
   if (!at) return '';
   const d = new Date(at);
@@ -32,8 +101,8 @@ function whenLabel(at) {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const day = new Date(d); day.setHours(0, 0, 0, 0);
   const diff = Math.round((today - day) / 86400000);
-  if (diff === 0) return `Hoje ${hh}`;
-  if (diff === 1) return `Ontem ${hh}`;
+  if (diff === 0) return `Today ${hh}`;
+  if (diff === 1) return `Yesterday ${hh}`;
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} · ${hh}`;
 }
 
@@ -59,6 +128,7 @@ async function boot() {
   // `?mock=1` força a fonte simulada (só p/ desenvolvimento visual: no app real,
   // com Bridge conectado, a skin nunca usa mock).
   const forceMock = new URLSearchParams(location.search).get('mock') === '1';
+  const readiness = createReadinessTracker();
   const useBridge = forceMock ? false : await detectHost();
   const source = useBridge ? createApiSource() : createMockSource();
   setState({ hostConnected: useBridge });
@@ -78,7 +148,12 @@ async function boot() {
     const mc = state.machine;
     mc.mixTemp = m.mixTemp;
     mc.groupTemp = m.groupTemp;
-    mc.state = m.state || 'ready';   // estado bruto da API; ui.js mapeia p/ a pílula
+    mc.targetMixTemp = m.targetMixTemp;
+    mc.targetGroupTemp = m.targetGroupTemp;
+    // prontidão real: estado + temperaturas x alvos, com memória (src/readiness.js)
+    mc.readiness = readiness.evaluate(mc);
+    mc.state = m.state || 'idle';
+    mc.substate = m.substate || '';
     renderMachine();
     if (!m.running) return;
     const s = state.live.series;
@@ -116,6 +191,23 @@ async function boot() {
     }
     renderMachine();
   });
+
+  // estado de conexão + erros de BLE — a fonte correta, segundo a documentação
+  if (source.onDevices) {
+    source.onDevices((d) => {
+      const mc = state.machine;
+      mc.link = { machine: d.machine, scale: d.scale, scanning: d.scanning, phase: d.phase };
+      state.machine.error = d.error || null;
+      const machineUp = d.machine && d.machine.state === 'connected';
+      if (!machineUp) {
+        mc.state = 'disconnected';
+        mc.readiness = 'disconnected';
+        readiness.reset();
+      }
+      if (d.scale) mc.scale.connected = d.scale.state === 'connected';
+      renderMachine();
+    });
+  }
 
   // nível do tanque — canal próprio, em mm
   if (source.onWaterLevels) {

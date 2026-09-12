@@ -85,6 +85,7 @@ Detecção de host em `src/api.js`: `window.REA_HOST` → `localStorage.reaHostn
 | WS `/ws/v1/machine/snapshot` | gráfico ao vivo, Mix/Group, estado da máquina |
 | WS `/ws/v1/scale/snapshot` | peso, fluxo gravimétrico e status da balança |
 | WS `/ws/v1/machine/waterLevels` | nível do tanque (mm) e limiar de recarga |
+| WS `/ws/v1/devices` | estado de conexão da máquina e da balança + erros de BLE |
 | WS `/ws/v1/display` | wake-lock (tela sempre acesa) |
 | `GET /profiles` | carrossel de favoritos e curvas planejadas |
 | `GET /shots` · `GET /shots/{id}` | histórico e curvas do shot |
@@ -96,13 +97,25 @@ Detecção de host em `src/api.js`: `window.REA_HOST` → `localStorage.reaHostn
 | `PUT /scale/tare` | botão TARE |
 | `GET /plugins` | descobre o plugin de Settings do app |
 
-A pílula de estado lê `state.state` do snapshot e mapeia o enum `MachineState`:
-`idle` e os estados de trabalho → **READY** (verde), `heating`/`booting`/`preheating` →
-**HEATING** (âmbar), `sleeping`/`error`/`needsWater`/sem conexão → vermelho (com o texto
-próprio de cada um).
+**Prontidão da máquina** (`src/readiness.js`): não basta o enum `MachineState` — a DE1
+só passa por `heating` num instante ao acordar e volta a reportar `idle` enquanto o grupo
+ainda sobe. O estado é combinado com as temperaturas e seus alvos (`targetMixTemperature`
+/ `targetGroupTemperature`), com memória para distinguir "aquecendo" de "frio e parado".
+O modelo é portado da skin [Bestpresso](https://github.com/xinghendri/bestpresso)
+(`src/api/decaid/readiness.ts`), incluindo a folga de 8 °C. Resultado: READY · HEATING ·
+NOT HEATING · SLEEPING · NO WATER · DISCONNECTED.
+
+**Estado de conexão** vem de `ws/v1/devices`, não da ausência de telemetria: os sockets
+ficam abertos mesmo com a máquina fora (doc/Skins.md § Machine Telemetry Socket
+Lifecycle). Esse canal também traz os erros de BLE já classificados por `kind`, que a
+skin mostra no card da balança.
 
 **Regra de ouro:** com Bridge conectado a skin **nunca** usa mock. Sem dado real,
-mostra `—`.
+mostra `—` — inclusive antes de `GET /workflow` responder: a receita nasce toda `null`,
+e o PUT omite campo desconhecido em vez de mandar `null` (que limparia o valor na
+máquina, e `targetYield` nem aceita).
+
+A interface é toda em inglês.
 
 Ao abrir, a skin **lê** `GET /workflow` e monta a receita a partir do que já está
 carregado na máquina (café, moedor, moagem, dose, drink, flush, água, vapor e

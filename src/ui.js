@@ -49,7 +49,7 @@ export function renderRecipe() {
   $('ratio-value').innerHTML = ratioText().replace(':', '<span class="colon">:</span>');
 
   for (const chip of $('brew-chips').children) {
-    chip.classList.toggle('is-on', Number(chip.dataset.temp) === Math.round(r.brewTemp));
+    chip.classList.toggle('is-on', r.brewTemp != null && Number(chip.dataset.temp) === Math.round(r.brewTemp));
   }
   paintPresets('dose-chips', PRESETS.dose, r.dose);
   paintPresets('drink-chips', PRESETS.drink, r.drink);
@@ -66,7 +66,7 @@ function paintPresets(id, values, current) {
     host.innerHTML = values.map((v) => `<button class="chip chip--round" data-v="${v}" type="button">${v}</button>`).join('');
   }
   for (const chip of host.children) {
-    chip.classList.toggle('is-on', Number(chip.dataset.v) === Math.round(current));
+    chip.classList.toggle('is-on', current != null && Number(chip.dataset.v) === Math.round(current));
   }
 }
 
@@ -82,49 +82,60 @@ function placeRuler(id, value, field) {
 // ================= auxiliares (água / vapor / flush) =================
 export function renderAux() {
   const a = state.aux;
-  $('aux-water').textContent = `${a.hotWater.ml}ml·${a.hotWater.temp}°`;
-  $('aux-steam').textContent = a.steam.on ? `${a.steam.time}s` : 'Off';
-  $('aux-flush').textContent = `${a.flush.s}s`;
+  const has = (v) => v != null;
+  $('aux-water').textContent = has(a.hotWater.ml) && has(a.hotWater.temp)
+    ? `${a.hotWater.ml}ml·${a.hotWater.temp}°` : DASH;
+  $('aux-steam').textContent = has(a.steam.time) ? (a.steam.on ? `${a.steam.time}s` : 'Off') : DASH;
+  $('aux-flush').textContent = has(a.flush.s) ? `${a.flush.s}s` : DASH;
 }
 
 // ================= estado da máquina, balança, tanque =================
+// mensagens por `kind` do ConnectionError (doc/Skins.md § Handling connection errors)
+const SCALE_ERROR = {
+  scaleConnectFailed: 'Scale did not connect',
+  scaleDisconnected: 'Scale dropped',
+  adapterOff: 'Bluetooth is off',
+  bluetoothPermissionDenied: 'No Bluetooth permission',
+  scanFailed: 'Scan could not start',
+};
+
 const STATE_PILL = {
   ready:        { cls: 'state-pill--ready',        icon: '#ic-cup',       label: 'Ready' },
   heating:      { cls: 'state-pill--heating',      icon: '#ic-cup-steam', label: 'Heating' },
+  notHeating:   { cls: 'state-pill--heating',      icon: '#ic-cup',       label: 'Not heating' },
+  sleeping:     { cls: 'state-pill--disconnected', icon: '#ic-moon',      label: 'Sleeping' },
+  noWater:      { cls: 'state-pill--disconnected', icon: '#ic-cup-off',   label: 'No water' },
   disconnected: { cls: 'state-pill--disconnected', icon: '#ic-cup-off',   label: 'Disconnected' },
 };
-
-// MachineState da API (rest_v1.yml) → as três pílulas do handoff (tela 11):
-// Ready (verde) · Heating (âmbar) · Disconnected (vermelho).
-// Estados de trabalho (espresso/steam/flush/…) continuam "Ready": a máquina está viva.
-const STATE_KIND = {
-  booting: 'heating', heating: 'heating', preheating: 'heating', fwUpgrade: 'heating',
-  sleeping: 'disconnected', disconnected: 'disconnected', error: 'disconnected', needsWater: 'disconnected',
-};
-// Dois estados reais da máquina que não cabem em "Disconnected" sem mentir:
-// dormindo e sem água. Mantêm a cor vermelha da família.
-const STATE_TEXT = { sleeping: 'Sleeping', needsWater: 'Sem água' };
 
 export function renderMachine() {
   const m = state.machine;
 
-  const p = STATE_PILL[STATE_KIND[m.state] || 'ready'];
+  const p = STATE_PILL[m.readiness] || STATE_PILL.disconnected;
   const pill = $('state-pill');
   pill.className = `state-pill ${p.cls}`;
   $('state-icon').innerHTML = `<use href="${p.icon}"/>`;
-  $('state-label').textContent = STATE_TEXT[m.state] || p.label;
+  $('state-label').textContent = p.label;
 
   // dormindo: a tela apaga e qualquer toque acorda a máquina
-  $('sleep-veil').hidden = m.state !== 'sleeping';
+  $('sleep-veil').hidden = m.readiness !== 'sleeping';
 
   $('mix-value').textContent = fmt(m.mixTemp, 1);
   $('group-value').textContent = fmt(m.groupTemp, 1);
 
   const w = $('scale-weight');
   valueWithUnit(w, fmt(m.scale.weight, 1), ' g');
+  // erro de BLE do canal /devices tem mensagem e sugestão prontas — mostramos
+  // no lugar do status genérico quando o erro é da balança
   const st = $('scale-status');
-  st.textContent = m.scale.connected ? 'Connected' : 'Disconnected';
-  st.classList.toggle('is-connected', m.scale.connected);
+  const err = m.error;
+  const scaleErr = err && /scale/i.test(err.kind || '') ? err : null;
+  const bleOff = err && (err.kind === 'adapterOff' || err.kind === 'bluetoothPermissionDenied');
+  st.textContent = scaleErr ? (SCALE_ERROR[scaleErr.kind] || scaleErr.message || 'Error')
+    : bleOff ? (SCALE_ERROR[err.kind] || err.message)
+    : m.scale.connected ? 'Connected' : 'Disconnected';
+  st.title = scaleErr ? (scaleErr.suggestion || '') : '';
+  st.classList.toggle('is-connected', m.scale.connected && !scaleErr);
   const connectBtn = $('scale-connect');
   connectBtn.dataset.restore = m.scale.connected ? 'TARE' : 'CONNECT';
   if (!connectBtn.dataset.busy && !connectBtn.dataset.flashing) {
@@ -154,7 +165,7 @@ function renderTank() {
     $('tank-fill').style.height = needsWater ? '6%' : '0';
     $('tank-pct').style.bottom = needsWater ? '6%' : '0';
     $('tank-pct').textContent = needsWater ? '!' : DASH;
-    $('tank-ml').textContent = needsWater ? 'Encher' : DASH;
+    $('tank-ml').textContent = needsWater ? 'Refill' : DASH;
     tank.classList.remove('is-low', 'is-critical');
     return;
   }
@@ -342,7 +353,7 @@ function setStopMode(mode) {
   const btn = $('btn-stop');
   btn.dataset.mode = mode;
   btn.classList.toggle('btn-stop--close', mode === 'close');
-  $('btn-stop-label').textContent = mode === 'close' ? 'FECHAR' : 'STOP';
+  $('btn-stop-label').textContent = mode === 'close' ? 'CLOSE' : 'STOP';
 }
 
 // ================= réguas (drag com snap) =================
@@ -420,7 +431,7 @@ export function initUI(chartInstance, dataSource, liveChart) {
   $('sleep-veil').addEventListener('click', () => wakeMachine());
   $('btn-settings').addEventListener('click', async () => {
     const ok = await openAppSettings();
-    if (!ok) flash($('btn-settings'), 'indisponível');
+    if (!ok) flash($('btn-settings'), 'unavailable');
   });
   $('edit-favorites').addEventListener('click', () => openProfiles());
 
@@ -448,15 +459,15 @@ export function initUI(chartInstance, dataSource, liveChart) {
     const btn = $('scale-connect');
     if (state.machine.scale.connected) {
       if (source.tareScale) await source.tareScale();
-      flash(btn, 'TARADO');
+      flash(btn, 'TARED');
       return;
     }
     if (!source.connectScale || btn.dataset.busy) return;
     btn.dataset.busy = '1';
-    btn.textContent = 'BUSCANDO…';
+    btn.textContent = 'SEARCHING…';
     const ok = await source.connectScale();
     delete btn.dataset.busy;
-    if (!state.machine.scale.connected) flash(btn, ok ? 'SEM BALANÇA' : 'FALHOU');
+    if (!state.machine.scale.connected) flash(btn, ok ? 'NO SCALE' : 'FAILED');
     else renderMachine();
   });
 

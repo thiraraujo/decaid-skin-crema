@@ -41,6 +41,7 @@ export function createApiSource() {
   const startCbs = new Set();
   const endCbs = new Set();
   const waterCbs = new Set();
+  const deviceCbs = new Set();
   const sockets = [];
 
   // ciclo de vida do shot, derivado do estado da máquina.
@@ -65,6 +66,7 @@ export function createApiSource() {
     onSnapshot(cb) { snapshotCbs.add(cb); return () => snapshotCbs.delete(cb); },
     onScale(cb) { scaleCbs.add(cb); return () => scaleCbs.delete(cb); },
     onWaterLevels(cb) { waterCbs.add(cb); return () => waterCbs.delete(cb); },
+    onDevices(cb) { deviceCbs.add(cb); return () => deviceCbs.delete(cb); },
     onShotStart(cb) { startCbs.add(cb); return () => startCbs.delete(cb); },
     onShotEnd(cb) { endCbs.add(cb); return () => endCbs.delete(cb); },
 
@@ -85,10 +87,13 @@ export function createApiSource() {
             t,
             running,
             state: st.state || 'idle',
+            substate: st.substate || '',
             pressure: m.pressure ?? 0,
             flow: m.flow ?? 0,
             mixTemp: m.mixTemperature ?? 0,
             groupTemp: m.groupTemperature ?? 0,
+            targetMixTemp: m.targetMixTemperature ?? null,
+            targetGroupTemp: m.targetGroupTemperature ?? null,
             temp: m.mixTemperature ?? 0,
             frame: Number.isInteger(m.profileFrame) ? m.profileFrame : null,
           });
@@ -114,6 +119,24 @@ export function createApiSource() {
             weight: m.weight,
             weightFlow: m.weightFlow ?? null,
             battery: m.battery ?? null,
+          });
+        }
+      });
+
+      // /devices: é a ÚNICA fonte confiável de estado de conexão — os sockets de
+      // telemetria ficam abertos mesmo com a máquina fora, então ausência de
+      // frame não prova desconexão (doc/Skins.md § Machine Telemetry Socket
+      // Lifecycle). Traz também os erros de BLE já classificados por `kind`.
+      openWS('/devices', (m) => {
+        if (!m || !Array.isArray(m.devices)) return;
+        const find = (t) => m.devices.find((d) => d.type === t) || null;
+        for (const cb of deviceCbs) {
+          cb({
+            machine: find('machine'),
+            scale: find('scale'),
+            scanning: !!m.scanning,
+            phase: (m.connectionStatus && m.connectionStatus.phase) || null,
+            error: (m.connectionStatus && m.connectionStatus.error) || null,
           });
         }
       });
@@ -170,12 +193,16 @@ export function createApiSource() {
       const devices = await this.getDevices();
       const scale = devices.find((d) => d.type === 'scale' && d.state !== 'connected');
       if (scale) {
+        // O resultado é estruturado (DeviceConnectResult): a doc manda usar
+        // `outcome`/`state` em vez de inferir sucesso por HTTP ou pelos frames
+        // seguintes. 409 = conflito ou dispositivo de inventário.
         const r = await fetch(`${httpBase}/api/v1/devices/connect`, {
           method: 'PUT', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ deviceId: scale.id }),
         }).catch((e) => { console.warn('[CREMA] falha ao conectar balança', e); return null; });
-        if (r && r.ok) return true;
-        console.warn('[CREMA] /devices/connect falhou', r && r.status, '— caindo no scan');
+        const result = r ? await r.json().catch(() => null) : null;
+        if (result && (result.outcome === 'connected' || result.outcome === 'alreadyConnected')) return true;
+        if (result) console.warn('[CREMA] connect:', result.outcome, result.error || '', result.connectionError || '');
       }
       const r = await fetch(`${httpBase}/api/v1/devices/scan?connect=true&quick=false`)
         .catch((e) => { console.warn('[CREMA] falha no scan de dispositivos', e); return null; });

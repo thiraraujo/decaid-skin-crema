@@ -8,14 +8,17 @@ export const state = {
   screen: 'home',              // 'home' | 'numpad' | 'history'
   modal: null,                 // null | 'adjust' | 'coffee' | 'coffeehist' | 'editshot' | 'favorites'
 
-  // receita do próximo shot — ratio é derivado (drink/dose)
+  // Receita do próximo shot — ratio é derivado (drink/dose).
+  // Tudo começa `null` de propósito: a regra de ouro do projeto é nunca mostrar
+  // número inventado. Estes campos só ganham valor quando `GET /workflow`
+  // responde; até lá a tela mostra "—".
   recipe: {
     coffeeId: null, coffeeName: '', coffeeBrand: '', coffeeProcess: '',
     grinderId: null, grinderName: '',
-    grind: 3.10,
-    dose: 18,
-    drink: 36,
-    brewTemp: 89,
+    grind: null,
+    dose: null,
+    drink: null,
+    brewTemp: null,
   },
 
   // perfis
@@ -32,19 +35,25 @@ export const state = {
 
   // máquina
   machine: {
-    state: 'disconnected',     // 'ready' | 'heating' | 'disconnected' | estado bruto da DE1
+    state: 'disconnected',     // estado bruto da DE1 (MachineState da API)
+    substate: '',
+    readiness: 'disconnected', // derivado: ready | heating | notHeating | sleeping | noWater | disconnected
     mixTemp: null, groupTemp: null,
+    targetMixTemp: null, targetGroupTemp: null,
     // nível do tanque em MILÍMETROS (ws/v1/machine/waterLevels) — a DE1 reporta
     // altura da água, não volume; `refill` é o limiar de recarga da máquina
     water: { level: null, refill: null, fullScale: 70 },
     scale: { connected: false, weight: 0, flow: null, battery: null },
+    link: { machine: null, scale: null, scanning: false, phase: null },  // /ws/v1/devices
+    error: null,        // ConnectionError do canal /devices ({kind, message, suggestion})
   },
 
   // água quente / vapor / flush
+  // idem: vem de rinseData / hotWaterData / steamSettings do workflow
   aux: {
-    flush: { s: 5 },
-    hotWater: { ml: 50, temp: 75 },
-    steam: { on: false, time: 40, flow: 0.5 },
+    flush: { s: null },
+    hotWater: { ml: null, temp: null },
+    steam: { on: false, time: null, flow: null },
   },
 
   // histórico
@@ -106,6 +115,6 @@ export function setState(patch) {
 /** ratio derivado — sempre drink/dose com 1 decimal (somente leitura na UI) */
 export function ratioText() {
   const { dose, drink } = state.recipe;
-  if (!dose || !drink) return '1:0.0';
+  if (!dose || !drink) return '—';
   return `1:${(drink / dose).toFixed(1)}`;
 }
