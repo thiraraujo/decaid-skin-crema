@@ -21,6 +21,7 @@ export const state = {
   // perfis
   profiles: { all: [], favorites: [] },
   selectedProfileId: null,
+  profileBaseTemp: null,   // temperatura-base do perfil ativo (referência do Brew)
   chartMode: 'lastShot',       // 'lastShot' | 'plan' | 'live'
   staticAxis: true,
   staticTimer: 30,

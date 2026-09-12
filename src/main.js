@@ -5,6 +5,7 @@ import { createChart } from './chart.js';
 import { createApiSource, detectHost } from './api.js';
 import { createMockSource } from './mock.js';
 import { initScreens } from './screens.js';
+import { initWorkflow, baseTempOf } from './workflow.js';
 import { initHistory } from './history.js';
 import {
   initUI, renderAll, renderMachine, renderCarousel, renderLastShot, renderChart,
@@ -59,6 +60,7 @@ async function boot() {
   setState({ hostConnected: useBridge });
   console.info(`[CREMA v2] fonte: ${source.kind}`);
 
+  initWorkflow(source);
   initScreens(source, () => renderAll());
   initHistory(source, () => renderAll());
   initUI(chart, source);
@@ -125,6 +127,12 @@ async function loadProfiles(source) {
   state.profiles.favorites = all.filter((p) => !p.hidden).slice(0, 5);
   if (!state.selectedProfileId && state.profiles.favorites.length) {
     state.selectedProfileId = state.profiles.favorites[0].key;
+  }
+  // temperatura-base do perfil ativo: referência para os deltas do Brew
+  const sel = all.find((p) => p.key === state.selectedProfileId);
+  if (sel) {
+    state.profileBaseTemp = baseTempOf(sel.raw);
+    if (state.profileBaseTemp != null) state.recipe.brewTemp = state.profileBaseTemp;
   }
   renderCarousel();
 }

@@ -6,6 +6,7 @@ import { miniChart } from './chart.js';
 import { sleepMachine, openAppSettings } from './host.js';
 import { openNumpad } from './numpad.js';
 import { openAdjust, openCoffee, openFavorites, openHistory } from './screens.js';
+import { pushWorkflow, pushProfile, pushBrewTemp, baseTempOf } from './workflow.js';
 
 const $ = (id) => document.getElementById(id);
 const DASH = '—';
@@ -180,10 +181,13 @@ export function selectProfile(key) {
   if (!key || key === state.selectedProfileId) return;
   state.selectedProfileId = key;
   state.chartMode = 'plan';
+  // o Brew segue a temperatura-base do novo perfil
+  const p = currentProfile();
+  const base = baseTempOf(p && p.raw);
+  if (base != null) { state.profileBaseTemp = base; state.recipe.brewTemp = base; renderRecipe(); }
   renderCarousel();
   renderChart();
-  const p = currentProfile();
-  if (source && source.applyProfile && p && p.id) source.applyProfile(p.id);
+  pushProfile(p);
 }
 
 export function currentProfile() {
@@ -310,10 +314,10 @@ export function initUI(chartInstance, dataSource) {
   $('grind-value').addEventListener('click', () => openNumpad('grind', state.recipe.grind, (v) => setRecipe({ grind: v })));
   $('dose-value').addEventListener('click', () => openNumpad('dose', state.recipe.dose, (v) => setRecipe({ dose: v })));
   $('drink-value').addEventListener('click', () => openNumpad('drink', state.recipe.drink, (v) => setRecipe({ drink: v })));
-  $('brew-value').addEventListener('click', () => openNumpad('brew', state.recipe.brewTemp, (v) => setRecipe({ brewTemp: v })));
+  $('brew-value').addEventListener('click', () => openNumpad('brew', state.recipe.brewTemp, (v) => setBrew(v)));
 
   for (const chip of $('brew-chips').children) {
-    chip.addEventListener('click', () => setRecipe({ brewTemp: Number(chip.dataset.temp) }));
+    chip.addEventListener('click', () => setBrew(Number(chip.dataset.temp)));
   }
 
   bindRuler('grind-ruler', 'grind', {
@@ -405,18 +409,11 @@ export function setRecipe(patch) {
   pushWorkflow();
 }
 
-let pushTimer = null;
-function pushWorkflow() {
-  if (!source || !source.applyContext) return;
-  clearTimeout(pushTimer);
-  pushTimer = setTimeout(() => {
-    const r = state.recipe;
-    source.applyContext({
-      coffeeName: r.coffeeName, coffeeRoaster: r.coffeeBrand,
-      grinderModel: r.grinderName, grinderSetting: String(r.grind),
-      targetDoseWeight: r.dose, targetYield: r.drink,
-    });
-  }, 400);
+// Brew não existe no workflow: a temperatura vive no perfil, por step (ver workflow.js)
+export function setBrew(v) {
+  state.recipe.brewTemp = v;
+  renderRecipe();
+  pushBrewTemp(currentProfile());
 }
 
 export function renderAll() {

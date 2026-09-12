@@ -3,6 +3,7 @@
 
 import { state } from './store.js';
 import { openNumpad } from './numpad.js';
+import { pushWorkflow } from './workflow.js';
 
 let scrim = null;
 let source = null;
@@ -97,6 +98,7 @@ function buildAdjust() {
   adjustEl.querySelector('#adj-done').addEventListener('click', () => closeModal(adjustEl));
   adjustEl.querySelector('#adj-steam').addEventListener('click', () => {
     state.aux.steam.on = !state.aux.steam.on;
+    pushAux();
     paintAdjust();
     onApplied && onApplied();
   });
@@ -129,15 +131,7 @@ function writeGroup(g, v) {
   pushAux();
 }
 
-function pushAux() {
-  if (!source || !source.putWorkflow) return;
-  const a = state.aux;
-  source.putWorkflow({
-    flush: { seconds: a.flush.s },
-    hotWater: { volume: a.hotWater.ml, temperature: a.hotWater.temp },
-    steam: { enabled: a.steam.on, duration: a.steam.time, flow: a.steam.flow },
-  });
-}
+function pushAux() { pushWorkflow(); }
 
 function paintAdjust() {
   for (const box of adjustEl.querySelectorAll('.opts')) {
