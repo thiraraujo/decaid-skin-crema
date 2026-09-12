@@ -7,8 +7,33 @@
 //     mudar o Brew clona o perfil ativo e desloca todos os steps pelo delta.
 
 import { state } from './store.js';
+import { resolveHost } from './api.js';
 
 let source = null;
+
+export const STEAM_MIN_C = 135;      // abaixo disso a máquina trata o vapor como desligado
+const STEAM_DEFAULT_C = 150;         // ao ligar sem temperatura anterior conhecida (exemplo da spec)
+
+// Desligar grava 0 °C na máquina, e a temperatura de antes se perde. Guardamos a
+// última temperatura LIGADA no key-value store do app (como o tema), para que
+// religar volte a ela mesmo depois de recarregar a skin.
+const STEAM_KV = () => `http://${resolveHost()}/api/v1/store/crema/steamTemp`;
+
+export function rememberSteamTemp(t) {
+  if (typeof t !== 'number' || t < STEAM_MIN_C) return;
+  if (!state.hostConnected) return;
+  fetch(STEAM_KV(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ c: t }) })
+    .catch(() => { /* sem store: vale o padrão */ });
+}
+
+export async function recallSteamTemp() {
+  if (!state.hostConnected) return null;
+  try {
+    const r = await fetch(STEAM_KV(), { cache: 'no-store' });
+    const d = r.ok ? await r.json() : null;          // chave ausente → 200 com null
+    return d && typeof d.c === 'number' && d.c >= STEAM_MIN_C ? d.c : null;
+  } catch { return null; }
+}
 export function initWorkflow(dataSource) { source = dataSource; }
 
 const debounced = (fn, ms = 400) => {
@@ -44,8 +69,13 @@ export const pushWorkflow = debounced(() => {
   });
   if (Object.keys(context).length) body.context = context;
 
+  // Vapor liga/desliga pela TEMPERATURA, não pela duração (rest_v1.yml § SteamSettings):
+  // targetTemperature 0 desliga o aquecedor de vapor; ligado é 135–160 °C na DE1.
+  // `duration` é só o tempo máximo de vapor. Enquanto o estado não é conhecido
+  // (on === null) a temperatura não é enviada — o deep-merge preserva a da máquina.
   const steam = defined({ duration: a.steam.time, flow: a.steam.flow });
-  if (Object.keys(steam).length) body.steamSettings = { targetTemperature: 155, ...steam };
+  if (a.steam.on != null) steam.targetTemperature = a.steam.on ? (a.steam.temp ?? STEAM_DEFAULT_C) : 0;
+  if (Object.keys(steam).length) body.steamSettings = steam;
 
   const water = defined({ targetTemperature: a.hotWater.temp, volume: a.hotWater.ml });
   if (Object.keys(water).length) body.hotWaterData = water;

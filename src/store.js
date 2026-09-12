@@ -27,7 +27,8 @@ export const state = {
   loadedProfileTitle: null, // perfil que a máquina tem carregado
   profileBaseTemp: null,   // temperatura-base do perfil ativo (referência do Brew)
   chartMode: 'lastShot',       // 'lastShot' | 'plan' | 'live'
-  staticAxis: true,
+  staticAxis: true,           // vem do app (prefs) no boot
+  numpadPrevious: {},         // valores anteriores do teclado, por campo — vem do app
   staticTimer: 30,
 
   // shot ao vivo
@@ -53,7 +54,9 @@ export const state = {
   aux: {
     flush: { s: null },
     hotWater: { ml: null, temp: null },
-    steam: { on: false, time: null, flow: null },
+    // on: null até a máquina responder (evita gravar "desligado" por engano);
+    // temp: temperatura de vapor quando ligado — é ela que liga/desliga (ver workflow.js)
+    steam: { on: null, time: null, flow: null, temp: null },
   },
 
   // histórico

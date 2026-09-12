@@ -7,6 +7,7 @@
 
 import { state } from './store.js';
 import { createChart } from './chart.js';
+import { savePref } from './prefs.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -217,6 +218,9 @@ function preview(key) {
   paintPreview();
 }
 
+// favoritos e a ordem deles são uma modificação do usuário → gravados no app
+const saveFavorites = () => savePref('favorites', state.profiles.favorites.map((p) => p.key));
+
 function toggleFav(key) {
   const favs = state.profiles.favorites;
   const i = favs.findIndex((f) => f.key === key);
@@ -231,6 +235,7 @@ function toggleFav(key) {
   paintFavs();
   paintList();
   paintPreview();
+  saveFavorites();
   hooks.onChanged && hooks.onChanged();
 }
 
@@ -241,6 +246,7 @@ function moveFav(key, dir) {
   if (i < 0 || j < 0 || j >= favs.length) return;
   favs.splice(j, 0, favs.splice(i, 1)[0]);
   paintFavs();
+  saveFavorites();
   hooks.onChanged && hooks.onChanged();
 }
 
@@ -252,6 +258,7 @@ function usePreview() {
   if (!favs.some((f) => f.key === p.key)) {
     if (favs.length >= MAX_FAVS) favs.pop();
     favs.unshift(p);
+    saveFavorites();
   }
   close();
   hooks.onUse && hooks.onUse(p.key);

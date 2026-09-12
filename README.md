@@ -110,6 +110,13 @@ ficam abertos mesmo com a máquina fora (doc/Skins.md § Machine Telemetry Socke
 Lifecycle). Esse canal também traz os erros de BLE já classificados por `kind`, que a
 skin mostra no card da balança.
 
+**Princípio: a máquina é a fonte de verdade.** Toda modificação feita na skin é gravada
+na máquina ou no app, e ao iniciar a skin **lê primeiro** e só então libera os toques
+(`.app.is-booting`, com limite de 12 s se a rede falhar). Receita, auxiliares e perfil vão
+no workflow; o que é da própria skin — tema, favoritos e ordem, eixo Static, valores
+anteriores do teclado, última temperatura de vapor — vai no key-value store do app
+(`/api/v1/store/crema/*`, ver `src/prefs.js`).
+
 **Regra de ouro:** com Bridge conectado a skin **nunca** usa mock. Sem dado real,
 mostra `—` — inclusive antes de `GET /workflow` responder: a receita nasce toda `null`,
 e o PUT omite campo desconhecido em vez de mandar `null` (que limparia o valor na
@@ -152,6 +159,9 @@ na segunda. Ler as duas antes de supor qualquer coisa.
 - **A escala do moedor não é informada.** `Grinder` só tem `settingType`
   (`numeric` | `preset`), sem mínimo/máximo. A faixa do Grind assume 0–100 e
   `fieldFor()` a alarga quando a máquina reporta um valor maior.
+- **Vapor liga/desliga pela temperatura**, não pela duração: `steamSettings.targetTemperature`
+  0 desliga (ligado é 135–160 °C na DE1); `duration` é só o tempo máximo. Como desligar
+  apaga a temperatura na máquina, a última temperatura ligada fica no app para religar nela.
 - **Brew não existe no workflow.** A temperatura mora no perfil, por step: mudar
   o Brew clona o perfil ativo e desloca todos os steps pelo delta.
 

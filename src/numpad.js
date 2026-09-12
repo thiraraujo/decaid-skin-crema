@@ -2,27 +2,23 @@
 // Usado por Grind/Dose/Drink/Brew e pelos valores manuais dos Adjustments.
 
 import { state, fieldFor } from './store.js';
-
-const PREV_KEY = 'crema.numpad.previous';
+import { savePref } from './prefs.js';
 
 let el = null;          // raiz da tela
 let ctx = null;         // { field, spec, onConfirm }
 let buffer = '';        // dígitos digitados ('' = ainda mostrando o valor inicial)
 let initial = '';
 
+// valores anteriores ficam no key-value store do app (src/prefs.js), carregados no boot
 function previousFor(field) {
-  try {
-    const all = JSON.parse(localStorage.getItem(PREV_KEY) || '{}');
-    return Array.isArray(all[field]) ? all[field] : [];
-  } catch { return []; }
+  const list = state.numpadPrevious && state.numpadPrevious[field];
+  return Array.isArray(list) ? list : [];
 }
 function rememberValue(field, value) {
-  try {
-    const all = JSON.parse(localStorage.getItem(PREV_KEY) || '{}');
-    const list = [String(value), ...(all[field] || []).filter((v) => v !== String(value))].slice(0, 3);
-    all[field] = list;
-    localStorage.setItem(PREV_KEY, JSON.stringify(all));
-  } catch { /* kiosk sem storage: segue sem histórico */ }
+  const all = { ...(state.numpadPrevious || {}) };
+  all[field] = [String(value), ...previousFor(field).filter((v) => v !== String(value))].slice(0, 3);
+  state.numpadPrevious = all;
+  savePref('numpadPrevious', all);
 }
 
 function build() {
