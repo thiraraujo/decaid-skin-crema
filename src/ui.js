@@ -1,7 +1,7 @@
 // CREMA v2 · tela principal (01 Home idle / 02 shot ao vivo).
 // Render puro a partir de `state` + interações da coluna da receita, carrossel e rodapé.
 
-import { state, setState, FIELDS, fieldFor, ratioText } from './store.js';
+import { state, setState, FIELDS, PRESETS, fieldFor, ratioText } from './store.js';
 import { miniChart } from './chart.js';
 import { sleepMachine, wakeMachine, openAppSettings } from './host.js';
 import { openNumpad } from './numpad.js';
@@ -51,10 +51,23 @@ export function renderRecipe() {
   for (const chip of $('brew-chips').children) {
     chip.classList.toggle('is-on', Number(chip.dataset.temp) === Math.round(r.brewTemp));
   }
+  paintPresets('dose-chips', PRESETS.dose, r.dose);
+  paintPresets('drink-chips', PRESETS.drink, r.drink);
 
   placeRuler('grind-ruler', r.grind, FIELDS.grind);
-  placeRuler('dose-ruler', r.dose, FIELDS.dose);
-  placeRuler('drink-ruler', r.drink, FIELDS.drink);
+}
+
+// Dose e Drink são presets em botão; valores fora da lista continuam vindo do
+// teclado (toque no número) e deixam todos os botões apagados.
+function paintPresets(id, values, current) {
+  const host = $(id);
+  if (!host) return;
+  if (host.children.length !== values.length) {
+    host.innerHTML = values.map((v) => `<button class="chip chip--round" data-v="${v}" type="button">${v}</button>`).join('');
+  }
+  for (const chip of host.children) {
+    chip.classList.toggle('is-on', Number(chip.dataset.v) === Math.round(current));
+  }
 }
 
 // O marcador fica sempre no centro: a régua é "infinita" e o tique alinha com o valor.
@@ -380,16 +393,8 @@ export function initUI(chartInstance, dataSource, liveChart) {
     set: (v) => { state.recipe.grind = v; renderRecipe(); },
     commit: () => pushWorkflow(),
   });
-  bindRuler('dose-ruler', 'dose', {
-    get: () => state.recipe.dose,
-    set: (v) => { state.recipe.dose = v; renderRecipe(); },
-    commit: () => pushWorkflow(),
-  });
-  bindRuler('drink-ruler', 'drink', {
-    get: () => state.recipe.drink,
-    set: (v) => { state.recipe.drink = v; renderRecipe(); },
-    commit: () => pushWorkflow(),
-  });
+  bindPresets('dose-chips', (v) => setRecipe({ dose: v }));
+  bindPresets('drink-chips', (v) => setRecipe({ drink: v }));
 
   $('machine-group').addEventListener('click', () => openAdjust());
 
@@ -448,6 +453,15 @@ export function initUI(chartInstance, dataSource, liveChart) {
 
 // Swipe ou toque troca o perfil selecionado. Captura o ponteiro para que o gesto
 // sobreviva ao dedo saindo do trilho, e ignora o toque quando ele virou arrasto.
+function bindPresets(id, apply) {
+  const host = $(id);
+  if (!host) return;
+  host.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-v]');
+    if (b) apply(Number(b.dataset.v));
+  });
+}
+
 function bindCarousel() {
   const host = $('carousel');
   const SWIPE_PX = 40;

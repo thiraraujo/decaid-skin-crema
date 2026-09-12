@@ -42,6 +42,9 @@ duas ações — ★ favoritar e ☕ usar agora (entra no carrossel e vai para a
 As categorias saem do próprio título, que o Decaid escreve como `Categoria/Nome`
 (`Pour over basket/V60 22g in, 375g out`, `D-Flow / default`).
 
+Dose, Drink e Brew usam presets em botão redondo (18/20/22 g · 36/40/45 g · 88/92/95 °C);
+o toque no número abre o teclado para valores fora da lista. O Grind mantém a régua.
+
 A tela 02 mostra um bloco por fase do perfil conforme o shot avança (Yield / Temp /
 Pressure / Flow por fase). As fases vêm dos steps do perfil; a fase corrente, de
 `profileFrame` no snapshot — sem esse campo, dos tempos planejados.

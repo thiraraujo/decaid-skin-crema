@@ -61,6 +61,13 @@ export const state = {
   numpad: null,                // { field, title, value, min, max, decimals, unit, hint, previous[], onConfirm }
 };
 
+// presets em botão — o toque no número continua abrindo o teclado p/ valores livres
+export const PRESETS = {
+  dose:  [18, 20, 22],
+  drink: [36, 40, 45],
+  brew:  [88, 92, 95],
+};
+
 // limites e passos de cada campo numérico (teclado + réguas)
 export const FIELDS = {
   grind: { title: 'Grind', min: 0, max: 100, step: 0.05, decimals: 2, unit: '' },
