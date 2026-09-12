@@ -26,6 +26,8 @@
   pointer-events: none;
 }
 .chart--thick .chart__label { font-size: 16px; }
+.chart--smooth .chart__label { font-size: 16px; }
+.chart__phase-label--top { bottom: auto; top: 0; }
 .chart__phase-label {
   position: absolute; bottom: 4px; transform: translateX(-50%);
   font: 600 11px/1 var(--sans); letter-spacing: .08em;
@@ -247,17 +249,26 @@
   gap: 20px;
 }
 .history__strip-fields { display: flex; gap: 36px; align-items: center; flex-wrap: wrap; }
+.history__strip-actions { display: flex; gap: 10px; align-items: center; flex: none; }
 .history__field { display: flex; flex-direction: column; gap: 6px; }
 .history__field-v { font: 600 28px var(--sans); line-height: 1; }
 .history__field-brand { color: var(--blue); font-weight: 500; }
 
 .history__chart { flex: 1; min-height: 0; padding: 18px 24px; display: flex; flex-direction: column; }
 .history__chart-head { flex: none; gap: 20px; }
-.history__phases { display: flex; gap: 12px; }
-.phase-pill {
-  display: inline-flex; align-items: center; gap: 8px;
-  font: 600 14px var(--sans); color: var(--text-2);
+/* perfis com muitos steps não podem empurrar a legenda para fora do card */
+.history__phases {
+  display: flex; gap: 12px; flex: 1; min-width: 0;
+  overflow-x: auto; scrollbar-width: none;
 }
+.history__phases::-webkit-scrollbar { display: none; }
+.history__chart-head .legend { flex: none; }
+.phase-pill {
+  display: inline-flex; align-items: center; gap: 8px; flex: none;
+  font: 600 14px var(--sans); color: var(--text-2);
+  max-width: 150px;
+}
+.phase-pill span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .phase-pill b {
   width: 26px; height: 26px; border-radius: 50%;
   background: rgba(120,160,230,.2);
@@ -316,6 +327,21 @@
 .fav__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 48px; margin-top: 24px; flex: 1; min-height: 0; }
 .fav__col { display: flex; flex-direction: column; min-height: 0; gap: 14px; }
 .fav__actions { display: flex; align-items: center; gap: 8px; }
+.fav__colhead { flex: none; gap: 16px; }
+.fav__count { color: var(--muted); letter-spacing: 0; font-weight: 500; }
+.fav__search {
+  display: flex; align-items: center; gap: 8px; flex: none;
+  height: 40px; padding: 0 14px; width: 240px;
+  border: 1px solid var(--border); border-radius: 20px;
+  color: var(--label);
+}
+.fav__search input {
+  flex: 1; min-width: 0; border: 0; background: none; outline: none;
+  font: 500 15px var(--sans); color: var(--text);
+  -webkit-appearance: none; appearance: none;
+}
+.fav__search input::placeholder { color: var(--label); }
+.fav__search input::-webkit-search-cancel-button { -webkit-appearance: none; }
 .fav__star { font-size: 24px; color: var(--label); width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
 .fav__star.is-on { color: var(--blue); }
 .stepper--sm { width: 36px; height: 36px; font-size: 16px; }

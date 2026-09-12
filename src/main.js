@@ -7,9 +7,10 @@ import { createMockSource } from './mock.js';
 import { initScreens } from './screens.js';
 import { initWorkflow, baseTempOf } from './workflow.js';
 import { initHistory } from './history.js';
+import { initLive } from './live.js';
 import {
   initUI, renderAll, renderMachine, renderCarousel, renderLastShot, renderChart,
-  onShotStarted, onShotTick, onShotEnded, selectProfile,
+  onShotStarted, onShotSample, onShotEnded,
 } from './ui.js';
 
 // canvas fixo 1320×800 escalado para a tela real (independe de dpr)
@@ -50,7 +51,9 @@ async function boot() {
   fitApp();
 
   const chart = createChart(document.getElementById('chart-host'), { gap: 80 });
-  chart.setConfig({ staticOn: state.staticAxis, staticTimer: state.staticTimer });
+  // a tela 02 tem o seu próprio gráfico (suavizado, 2px) — ver src/live.js
+  const liveChart = initLive();
+  for (const c of [chart, liveChart]) c.setConfig({ staticOn: state.staticAxis, staticTimer: state.staticTimer });
 
   // `?mock=1` força a fonte simulada (só p/ desenvolvimento visual: no app real,
   // com Bridge conectado, a skin nunca usa mock).
@@ -63,7 +66,7 @@ async function boot() {
   initWorkflow(source);
   initScreens(source, () => renderAll());
   initHistory(source, () => renderAll());
-  initUI(chart, source);
+  initUI(chart, source, liveChart);
 
   // ---------- telemetria ----------
   source.onSnapshot((m) => {
@@ -79,8 +82,13 @@ async function boot() {
     s.flow.push([m.t, m.flow]);
     s.temp.push([m.t, m.temp]);
     for (const k of ['pressure', 'flow', 'temp', 'weight']) if (s[k].length > 900) s[k].shift();
-    chart.update(s);
-    onShotTick(m.t);
+    liveChart.update(s);
+    state.live.t = m.t;
+    onShotSample({
+      t: m.t, frame: Number.isInteger(m.frame) ? m.frame : null,
+      pressure: m.pressure, flow: m.flow, temp: m.temp,
+      weight: mc.scale.weight || 0,
+    });
   });
 
   source.onScale((w) => {
@@ -90,7 +98,7 @@ async function boot() {
       const s = state.live.series;
       const t = s.pressure.length ? s.pressure[s.pressure.length - 1][0] : 0;
       s.weight.push([t, w.weight]);
-      chart.update(s);
+      liveChart.update(s);
     }
     renderMachine();
   });
@@ -214,7 +222,11 @@ async function loadHistory(source) {
   const first = state.history[0];
   if (first && !first.series && source.getShot) {
     const series = await source.getShot(first.id);
-    if (series) { first.series = series; first.duration = first.duration ?? series.duration; }
+    if (series) {
+      first.series = series;
+      first.duration = first.duration ?? series.duration;
+      if (first.brewTemp == null) first.brewTemp = series.brewTemp ?? null;
+    }
   }
 }
 

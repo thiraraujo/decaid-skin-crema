@@ -7,12 +7,14 @@ import { sleepMachine, openAppSettings } from './host.js';
 import { openNumpad } from './numpad.js';
 import { openAdjust, openCoffee, openFavorites, openHistory } from './screens.js';
 import { pushWorkflow, pushProfile, pushBrewTemp, baseTempOf } from './workflow.js';
+import { startLive, onLiveSample, endLive } from './live.js';
 
 const $ = (id) => document.getElementById(id);
 const DASH = '—';
 
 let chart = null;
 let source = null;
+let liveChartRef = null;
 
 // ---------- helpers de formatação ----------
 const fmt = (v, d = 1) => (v == null || Number.isNaN(v) ? DASH : Number(v).toFixed(d));
@@ -267,27 +269,37 @@ export function renderChart() {
 }
 
 // ================= shot ao vivo (02) =================
+// A tela 02 é um elemento próprio (#live) que cobre a home; o gráfico ao vivo é
+// uma segunda instância, suavizada — ver src/live.js.
+let endTimer = null;
+
 export function onShotStarted() {
+  clearTimeout(endTimer);
   state.chartMode = 'live';
-  document.getElementById('home').classList.add('is-live');
-  const p = currentProfile();
-  const r = state.recipe;
-  $('live-profile').textContent = (p && p.name) || 'Espresso';
-  $('live-meta').textContent = [
-    r.coffeeName, r.grinderName && `${r.grinderName} ${fmt(r.grind, 2)}`,
-    `${fmtInt(r.dose)}→${fmtInt(r.drink)}g`, `${fmtInt(r.brewTemp)}°`,
-  ].filter(Boolean).join(' · ');
-  chart.showLive(p);
+  $('home').classList.add('is-live');
+  const live = $('live');
+  live.hidden = false;
+  requestAnimationFrame(() => live.classList.add('is-on'));
+  startLive(currentProfile());
 }
 
-export function onShotTick(t) {
-  $('live-timer').textContent = t.toFixed(1);
+export function onShotSample(m) {
+  onLiveSample(m);
 }
 
+// Ao terminar, a tela fica 3s com todos os blocos antes de voltar à home
+// (docs/handoff-shot-live § Comportamento).
 export function onShotEnded() {
-  document.getElementById('home').classList.remove('is-live');
-  state.chartMode = 'lastShot';
-  renderChart();
+  endLive();
+  clearTimeout(endTimer);
+  endTimer = setTimeout(() => {
+    const live = $('live');
+    live.classList.remove('is-on');
+    $('home').classList.remove('is-live');
+    setTimeout(() => { live.hidden = true; }, 300);
+    state.chartMode = 'lastShot';
+    renderChart();
+  }, 3000);
 }
 
 // ================= réguas (drag com snap) =================
@@ -332,9 +344,10 @@ function clampStep(v, f) {
 }
 
 // ================= bootstrap =================
-export function initUI(chartInstance, dataSource) {
+export function initUI(chartInstance, dataSource, liveChart) {
   chart = chartInstance;
   source = dataSource;
+  liveChartRef = liveChart || null;
 
   // --- coluna da receita ---
   $('coffee-name-btn').addEventListener('click', () => openCoffee('coffee'));
@@ -382,6 +395,7 @@ export function initUI(chartInstance, dataSource) {
     tog.classList.toggle('is-on', state.staticAxis);
     tog.setAttribute('aria-checked', String(state.staticAxis));
     chart.setConfig({ staticOn: state.staticAxis });
+    if (liveChartRef) liveChartRef.setConfig({ staticOn: state.staticAxis });
   });
 
   // --- rodapé ---

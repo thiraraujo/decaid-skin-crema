@@ -32,17 +32,6 @@
   <!-- ======================= HOME (01) / SHOT AO VIVO (02) ======================= -->
   <main class="home" id="home">
 
-    <!-- cabeçalho do shot ao vivo — só visível durante a extração -->
-    <header class="live-head" id="live-head">
-      <div class="live-head__id">
-        <span class="live-head__profile" id="live-profile">—</span>
-        <span class="live-head__meta" id="live-meta">—</span>
-      </div>
-      <div class="live-head__right">
-        <div class="live-head__timer mono"><span id="live-timer">0.0</span><span class="u">s</span></div>
-        <button class="btn-stop" id="btn-stop" type="button"><span class="btn-stop__sq"></span>STOP</button>
-      </div>
-    </header>
 
     <!-- ---------- coluna da receita (300px) ---------- -->
     <aside class="rail" id="rail">
@@ -206,6 +195,43 @@
     </div>
 
   </main>
+
+  <!-- ======================= 02 · SHOT AO VIVO ======================= -->
+  <section class="live" id="live" hidden>
+
+    <header class="row live__head">
+      <div class="live__recipe">
+        <div class="live__field"><div class="lb">Profile</div><div class="live__v" id="lv-profile">—</div></div>
+        <div class="live__sep"></div>
+        <div class="live__field"><div class="lb">Coffee</div><div class="live__v" id="lv-coffee">—</div></div>
+        <div class="live__sep"></div>
+        <div class="live__field"><div class="lb">Grinder</div><div class="live__v" id="lv-grinder">—</div></div>
+        <div class="live__sep"></div>
+        <div class="live__field"><div class="lb">Dose → Drink</div><div class="mo live__v live__v--mono" id="lv-dose">—</div></div>
+        <div class="live__field"><div class="lb lb--blue">Ratio</div><div class="mo live__v live__v--mono live__v--blue" id="lv-ratio">—</div></div>
+        <div class="live__field"><div class="lb">Brew</div><div class="mo live__v live__v--mono live__v--red" id="lv-brew">—</div></div>
+      </div>
+      <div class="live__right">
+        <div class="mo live__timer"><span id="lv-timer">0.0</span><span class="u">s</span></div>
+        <button class="btn-stop" id="btn-stop" type="button"><span class="btn-stop__sq"></span>STOP</button>
+      </div>
+    </header>
+
+    <div class="row live__legend">
+      <span class="lb lb--xs">bar / ml·s</span>
+      <div class="live__legend-items">
+        <span><i style="background:var(--blue)"></i>Flow <i class="dash" style="border-color:var(--blue)"></i></span>
+        <span><i style="background:var(--green)"></i>Pressure <i class="dash" style="border-color:var(--green)"></i></span>
+        <span><i style="background:var(--red)"></i>Temperature</span>
+        <span><i style="background:var(--amber)"></i>Weight</span>
+      </div>
+    </div>
+
+    <div class="live__plot" id="live-chart"></div>
+
+    <div class="live__phases" id="live-phases"></div>
+
+  </section>
 
 </div>
 

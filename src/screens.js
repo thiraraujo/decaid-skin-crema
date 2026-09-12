@@ -314,6 +314,7 @@ export { openHistory } from './history.js';
 // Até 5 perfis na barra; ⭐ marca/desmarca, ↑↓ reordena. Sem equivalente nas telas
 // finais do handoff — segue o mesmo modal largo dos demais.
 let favEl = null;
+let favQuery = '';
 
 function buildFavorites() {
   favEl = document.createElement('div');
@@ -333,12 +334,19 @@ function buildFavorites() {
         <div class="picker__scroll"><div class="picker__list" id="fv-selected"></div></div>
       </div>
       <div class="fav__col">
-        <div class="lb lb--md">Todos os perfis</div>
+        <div class="row fav__colhead">
+          <div class="lb lb--md">Todos os perfis <span class="fav__count" id="fv-count"></span></div>
+          <label class="fav__search">
+            <svg class="ic" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><use href="#ic-search"/></svg>
+            <input id="fv-q" type="search" placeholder="Buscar perfil" autocomplete="off">
+          </label>
+        </div>
         <div class="picker__scroll"><div class="picker__list" id="fv-all"></div><div class="picker__fade"></div></div>
       </div>
     </div>`;
   app().appendChild(favEl);
   favEl.querySelector('#fv-done').addEventListener('click', () => closeModal(favEl));
+  favEl.querySelector('#fv-q').addEventListener('input', (e) => { favQuery = e.target.value; paintAllProfiles(); });
   favEl.addEventListener('click', (e) => {
     const b = e.target.closest('[data-act]');
     if (!b) return;
@@ -376,18 +384,31 @@ function paintFavorites() {
       </span>
     </div>`).join('') || `<div class="coffeehist__empty">Nenhum favorito.</div>`;
 
+  paintAllProfiles();
+}
+
+// A máquina pode ter dezenas de perfis (73 no Bridge de teste): a lista mostra
+// todos, e a busca evita rolar tudo no tablet.
+function paintAllProfiles() {
+  const favs = state.profiles.favorites;
   const full = state.profiles.all.length ? state.profiles.all : favs;
-  favEl.querySelector('#fv-all').innerHTML = full.map((p) => {
+  const q = favQuery.trim().toLowerCase();
+  const shown = q ? full.filter((p) => p.name.toLowerCase().includes(q)) : full;
+
+  favEl.querySelector('#fv-count').textContent = q ? `${shown.length}/${full.length}` : String(full.length);
+  favEl.querySelector('#fv-all').innerHTML = shown.map((p) => {
     const on = favs.some((f) => f.key === p.key);
     return `<div class="picker__item row${on ? ' is-on' : ''}">
       <span><span class="picker__name">${esc(p.name)}</span>${p.hidden ? '<span class="picker__brand">oculto na máquina</span>' : ''}</span>
       <button class="fav__star${on ? ' is-on' : ''} tap" data-act="toggle" data-key="${esc(p.key)}" type="button">${on ? '★' : '☆'}</button>
     </div>`;
-  }).join('');
+  }).join('') || '<div class="coffeehist__empty">Nenhum perfil com esse nome.</div>';
 }
 
 export function openFavorites() {
   if (!favEl) buildFavorites();
+  favQuery = '';
+  favEl.querySelector('#fv-q').value = '';
   paintFavorites();
   state.modal = 'favorites';
   showModal(favEl);

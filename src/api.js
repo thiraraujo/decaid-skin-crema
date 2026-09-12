@@ -88,7 +88,7 @@ export function createApiSource() {
             mixTemp: m.mixTemperature ?? 0,
             groupTemp: m.groupTemperature ?? 0,
             temp: m.mixTemperature ?? 0,
-            frame: m.profileFrame ?? 0,
+            frame: Number.isInteger(m.profileFrame) ? m.profileFrame : null,
           });
         }
       });
@@ -351,8 +351,9 @@ function mapShotMeasurements(shot) {
   const title = (pr && pr.title) || shot.profileTitle || 'Shot';
   // o próprio shot carrega o perfil com que foi tirado → plano (tracejado) e fases
   const plan = pr ? profileToPlan(pr) : null;
+  const brewTemp = plan && plan.temp && plan.temp.length ? plan.temp[0][1] : null;
   return {
-    kind: 'shot', profile: title, duration: dur || 30,
+    kind: 'shot', profile: title, duration: dur || 30, brewTemp,
     pressure, flow, temp, weight,
     pressureTarget: plan ? plan.pressure : null,
     flowTarget: plan ? plan.flow : null,

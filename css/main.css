@@ -331,17 +331,36 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .tank.is-refill .tank__tube { box-shadow: 0 0 0 1px rgba(240,106,74,.45); }
 
 /* ======================= 02 · SHOT AO VIVO ======================= */
-.live-head {
-  position: absolute; left: 0; right: 0; top: 0; height: 96px;
-  padding: 0 40px;
-  display: none; align-items: center; justify-content: space-between;
-  border-bottom: 1px solid var(--hairline);
+/* Tela própria (docs/handoff-shot-live): cabeçalho com a receita em leitura,
+   gráfico como herói e um bloco por fase do perfil aparecendo conforme o shot anda. */
+.live {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  background: var(--bg);
+  z-index: 30;
+  opacity: 0;
+  transition: opacity .3s ease-out;
 }
-.live-head__profile { font: 600 30px var(--sans); text-transform: uppercase; }
-.live-head__meta { font: 400 20px var(--sans); color: var(--muted); margin-left: 12px; }
-.live-head__right { display: flex; align-items: center; gap: 28px; }
-.live-head__timer { font-size: 56px; line-height: 1; letter-spacing: -.02em; }
-.live-head__timer .u { font-size: 24px; }
+.live.is-on { opacity: 1; }
+
+/* ---- cabeçalho ---- */
+.live__head { height: 96px; flex: none; padding: 0 40px; border-bottom: 1px solid var(--hairline); }
+.live__recipe { display: flex; align-items: center; gap: 26px; white-space: nowrap; min-width: 0; }
+.live__sep { width: 1px; height: 40px; background: var(--border-soft); flex: none; }
+.live__field { min-width: 0; }
+.live__v { font: 600 22px var(--sans); margin-top: 4px; }
+.live__v--mono { font-family: var(--mono); font-weight: 500; }
+.live__v--blue { color: var(--blue); }
+.live__v--red { color: var(--red); }
+.live__v .brand { font-weight: 500; color: var(--blue); font-size: 16px; }
+.live__v .grind { font-family: var(--mono); font-weight: 500; font-size: 20px; }
+.live__v .drink { color: var(--amber); }
+.live__v .u { font-size: 13px; color: var(--label); }
+.live__v .colon { font-size: .6em; vertical-align: .1em; }
+
+.live__right { display: flex; align-items: center; gap: 28px; flex: none; }
+.live__timer { font-size: 56px; line-height: 1; letter-spacing: -.02em; }
+.live__timer .u { font-size: 24px; }
 .btn-stop {
   height: 44px; padding: 0 22px;
   border: 1px solid rgba(240,106,74,.7); border-radius: 22px;
@@ -350,17 +369,79 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 }
 .btn-stop__sq { width: 11px; height: 11px; background: var(--red); border-radius: 2px; }
 
-/* durante o shot: some a coluna/carrossel/rodapé/tanque, o gráfico toma a tela */
-.home.is-live .rail,
-.home.is-live .topbar,
-.home.is-live .carousel,
-.home.is-live .home__bottom,
-.home.is-live .tank { opacity: 0; pointer-events: none; }
-.home.is-live .live-head { display: flex; }
-.home.is-live .chart-card {
-  position: absolute; left: 40px; right: 40px; top: 120px; bottom: 24px;
-  margin: 0; padding: 0;
-  background: none; border: 0; box-shadow: none;
-  transition: inset .3s ease-out;
+/* ---- legenda ---- */
+.live__legend { margin: 16px 40px 0; flex: none; font: 500 12px var(--sans); color: var(--label); }
+.live__legend-items { display: flex; gap: 18px; align-items: center; }
+.live__legend-items span { display: flex; gap: 6px; align-items: center; }
+.live__legend-items i { display: inline-block; width: 18px; height: 2px; }
+.live__legend-items i.dash { height: 0; width: 14px; border-top: 2px dashed; opacity: .6; background: none; }
+
+/* ---- gráfico ---- */
+.live__plot { position: relative; height: 412px; flex: none; margin: 6px 40px 0; }
+
+/* ---- blocos de fase ---- */
+.live__phases {
+  display: flex; gap: 12px; flex: none;
+  height: 178px; margin: 16px 0 0 40px;
+  overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: none;
 }
-.home.is-live .chart-card__head { display: none; }
+.live__phases::-webkit-scrollbar { display: none; }
+
+.phase-card {
+  width: 212px; flex: none;
+  border: 1px solid var(--border-soft); border-radius: 14px;
+  padding: 12px 16px;
+  display: flex; flex-direction: column; gap: 6px;
+  opacity: .8;
+  transition: width .25s ease-out, opacity .25s ease-out, border-color .25s ease-out, background-color .25s ease-out;
+}
+.phase-card__head { margin-bottom: 2px; }
+.phase-card__name { display: flex; gap: 8px; align-items: center; font: 600 14px var(--sans); color: var(--text-2); min-width: 0; }
+.phase-card__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.phase-card__n {
+  width: 22px; height: 22px; border-radius: 50%; flex: none;
+  background: rgba(255,255,255,.10);
+  display: inline-flex; align-items: center; justify-content: center;
+  font: 400 11px var(--sans); color: var(--text);
+}
+.phase-card__time { font-family: var(--mono); font-weight: 500; font-size: 14px; color: var(--label); flex: none; }
+.phase-card__row { display: flex; align-items: baseline; gap: 10px; }
+.phase-card__row .lb { font-size: 9px; width: 64px; flex: none; }
+.phase-card__v { font-family: var(--mono); font-weight: 500; font-size: 16px; white-space: nowrap; }
+.phase-card__v .u { font-size: 10px; color: var(--label); }
+.phase-card__v--yield { color: var(--amber); }
+.phase-card__v--temp { color: var(--red); }
+.phase-card__v--press { color: var(--green); }
+.phase-card__v--flow { color: var(--blue); }
+
+.phase-card.is-entering { width: 100px; }
+.phase-card.is-entering .phase-card__row,
+.phase-card.is-entering .phase-card__time { opacity: 0; }
+.phase-card__row, .phase-card__time { transition: opacity .25s ease-out; }
+
+.phase-card.is-current {
+  opacity: 1;
+  border-color: rgba(95,217,142,.45);
+  background: rgba(95,217,142,.05);
+}
+.phase-card.is-current .phase-card__name { color: var(--text); }
+.phase-card.is-current .phase-card__n { background: var(--green); color: var(--bg); }
+.phase-card.is-current .phase-card__time { color: var(--text-2); }
+
+.phase-slot {
+  width: 100px; flex: none;
+  border: 1px dashed var(--border-soft); border-radius: 14px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  font: 600 11px var(--sans); color: var(--muted); letter-spacing: .08em;
+  text-align: center; padding: 0 8px;
+}
+.phase-slot__n {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 1px solid var(--border);
+  display: inline-flex; align-items: center; justify-content: center; font-size: 11px;
+}
+.phase-slot__label { text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+
+/* durante o shot a home sai de cena */
+.home.is-live { opacity: 0; pointer-events: none; transition: opacity .2s ease-out; }

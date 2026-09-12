@@ -3,6 +3,7 @@
 import { state, FIELDS } from './store.js';
 import { createChart } from './chart.js';
 import { openNumpad } from './numpad.js';
+import { pushWorkflow } from './workflow.js';
 
 let source = null;
 let onApplied = null;
@@ -50,10 +51,13 @@ function build() {
       </div>
       <div class="row history__strip">
         <div class="history__strip-fields" id="hd-strip"></div>
-        <button class="pill pill--blue tap" id="hs-edit" type="button">
-          <svg class="ic" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-pencil"/></svg>
-          Edit
-        </button>
+        <div class="history__strip-actions">
+          <button class="pill pill--blue tap" id="hs-apply" type="button">Apply</button>
+          <button class="pill pill--blue tap" id="hs-edit" type="button">
+            <svg class="ic" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-pencil"/></svg>
+            Edit
+          </button>
+        </div>
       </div>
       <div class="card history__chart">
         <div class="row history__chart-head">
@@ -76,6 +80,7 @@ function build() {
   screenEl.querySelector('#hs-close').addEventListener('click', close);
   screenEl.querySelector('#hs-search').addEventListener('click', openCoffeeSearch);
   screenEl.querySelector('#hs-edit').addEventListener('click', () => openEditShot(selected()));
+  screenEl.querySelector('#hs-apply').addEventListener('click', () => applyShot(selected()));
   screenEl.querySelector('#hs-list').addEventListener('click', (e) => {
     const b = e.target.closest('[data-id]');
     if (b) select(b.dataset.id);
@@ -149,7 +154,7 @@ function paintDetail(s) {
 
   const phases = (s.series && s.series.phases) || [];
   screenEl.querySelector('#hd-phases').innerHTML = phases
-    .map((p, i) => `<span class="phase-pill"><b>${i + 1}</b>${esc(p.label)}</span>`).join('');
+    .map((p, i) => `<span class="phase-pill"><b>${i + 1}</b><span>${esc(p.label)}</span></span>`).join('');
 
   if (s.series) chart.showShot(s.series);
   else loadSeries(s);
@@ -161,12 +166,41 @@ async function loadSeries(s) {
   if (!series) return;
   s.series = series;
   s.duration = s.duration ?? series.duration;
+  if (s.brewTemp == null && series.brewTemp != null) s.brewTemp = series.brewTemp;
   if (state.selectedShotId === s.id) { chart.showShot(series); paintDetail(s); }
 }
 
 function select(id) {
   state.selectedShotId = id;
   paint();
+}
+
+/**
+ * Apply — copia a receita deste shot para a tela principal (café, moedor,
+ * moagem, dose e drink), grava no workflow da máquina e volta para a home.
+ * O perfil NÃO é aplicado: quem escolhe o perfil é o carrossel.
+ */
+function applyShot(s) {
+  if (!s) return;
+  const r = state.recipe;
+  if (s.coffee) {
+    const bean = state.beans.find((b) => b.name === s.coffee);
+    r.coffeeName = s.coffee;
+    r.coffeeBrand = s.brand || (bean ? bean.brand : '');
+    r.coffeeId = bean ? bean.id : (s.coffeeId || null);
+    r.coffeeProcess = bean ? bean.process : '';
+  }
+  if (s.grinder) {
+    const gr = state.grinders.find((g) => g.name === s.grinder);
+    r.grinderName = s.grinder;
+    r.grinderId = gr ? gr.id : (s.grinderId || null);
+  }
+  if (s.grind != null) r.grind = s.grind;
+  if (s.dose != null) r.dose = s.dose;
+  if (s.yield != null) r.drink = s.yield;
+
+  pushWorkflow();
+  close();
 }
 
 export function openHistory(shot) {

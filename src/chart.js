@@ -14,11 +14,31 @@ const SVGNS = 'http://www.w3.org/2000/svg';
 const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
 const last = (a) => (a && a.length ? a[a.length - 1] : null);
 
-function pointsOf(pairs, vmax, tMax) {
-  if (!pairs || !pairs.length) return '';
-  return pairs
-    .map(([t, v]) => `${(t / tMax * W).toFixed(1)},${(H - clamp(v / vmax, -0.2, 1.2) * H).toFixed(1)}`)
-    .join(' ');
+function toXY(pairs, vmax, tMax) {
+  return pairs.map(([t, v]) => [t / tMax * W, H - clamp(v / vmax, -0.2, 1.2) * H]);
+}
+
+const n1 = (n) => n.toFixed(1);
+
+/** caminho reto (um L por amostra) */
+function linePath(pts) {
+  if (!pts.length) return '';
+  return `M${n1(pts[0][0])},${n1(pts[0][1])}` + pts.slice(1).map(([x, y]) => ` L${n1(x)},${n1(y)}`).join('');
+}
+
+/** Catmull-Rom → Bézier cúbica, tensão 1/6; Y preso a [0,H] para o peso não
+ *  descer abaixo da base quando a curva "passa do ponto" (docs/handoff-shot-live). */
+function curvePath(pts) {
+  if (pts.length < 2) return '';
+  const cl = (y) => Math.min(H, Math.max(0, y));
+  let d = `M${n1(pts[0][0])},${n1(pts[0][1])}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, cl(p1[1] + (p2[1] - p0[1]) / 6)];
+    const c2 = [p2[0] - (p3[0] - p1[0]) / 6, cl(p2[1] - (p3[1] - p1[1]) / 6)];
+    d += ` C${n1(c1[0])},${n1(c1[1])} ${n1(c2[0])},${n1(c2[1])} ${n1(p2[0])},${n1(p2[1])}`;
+  }
+  return d;
 }
 
 function svgEl(tag, attrs) {
@@ -35,6 +55,8 @@ export function createChart(host, opts = {}) {
   const cfg = {
     gap: opts.gap ?? 80,
     thick: !!opts.thick,
+    smooth: !!opts.smooth,          // curvas suavizadas + traço 2px (tela 02)
+    phaseLabelsTop: !!opts.smooth,  // fases numeradas no alto do gráfico
     axes: opts.axes !== false,
     staticOn: true,
     staticTimer: 30,
@@ -64,12 +86,14 @@ export function createChart(host, opts = {}) {
   const gPhases = svgEl('g', {});
   svg.appendChild(gPhases);
 
-  const mkLine = (stroke, extra) => svgEl('polyline', {
-    points: '', fill: 'none', stroke, 'stroke-width': cfg.thick ? 3.5 : 2.5,
+  const mkLine = (stroke, extra) => svgEl('path', {
+    d: '', fill: 'none', stroke, 'stroke-width': cfg.smooth ? 2 : (cfg.thick ? 3.5 : 2.5),
     'stroke-linejoin': 'round', 'stroke-linecap': 'round',
     'vector-effect': 'non-scaling-stroke', ...extra,
   });
-  const dash = { 'stroke-width': 2, 'stroke-dasharray': '6 6', 'stroke-opacity': .55 };
+  const dash = cfg.smooth
+    ? { 'stroke-width': 1.5, 'stroke-dasharray': '4 5', 'stroke-opacity': .5 }
+    : { 'stroke-width': 2, 'stroke-dasharray': '6 6', 'stroke-opacity': .55 };
   const line = {
     pressTarget: mkLine('var(--green)', dash),
     flowTarget: mkLine('var(--blue)', dash),
@@ -106,11 +130,13 @@ export function createChart(host, opts = {}) {
   host.appendChild(root);
   if (!cfg.axes) root.classList.add('chart--bare');
   if (cfg.thick) root.classList.add('chart--thick');
+  if (cfg.smooth) root.classList.add('chart--smooth');
 
   // espessura do traço acompanha o modo: 3.5px ao vivo (tela 02), 2.5px nas vistas estáticas
   function setThick(on) {
     cfg.thick = on;
     root.classList.toggle('chart--thick', on);
+    if (cfg.smooth) return;   // tela 02 usa 2px fixo
     for (const k of ['temp', 'weight', 'flow', 'press']) line[k].setAttribute('stroke-width', on ? 3.5 : 2.5);
   }
 
@@ -119,6 +145,7 @@ export function createChart(host, opts = {}) {
   let view = null;          // dados estáticos (plan/shot)
   let buffers = null;       // séries ao vivo
   let targets = null;       // { pressure, flow } planejados do perfil ativo
+  let livePhases = null;    // fases do perfil ativo, desenhadas durante o shot
   let dims = null;
   let rafId = null, dirty = false;
 
@@ -184,11 +211,25 @@ export function createChart(host, opts = {}) {
       const wPct = ((ph.end - ph.start) / tMax) * 100;
       if (wPct < 6) continue;
       const d = document.createElement('div');
-      d.className = 'chart__phase-label';
+      d.className = `chart__phase-label${cfg.phaseLabelsTop ? ' chart__phase-label--top' : ''}`;
       d.style.left = `${((ph.start + ph.end) / 2 / tMax) * 100}%`;
       d.style.maxWidth = `${wPct}%`;
       d.textContent = ph.label;
       phaseLabelsEl.appendChild(d);
+    }
+    hideCrowdedLabels();
+  }
+
+  // perfis reais têm muitos steps: esconde o rótulo que encostaria no anterior,
+  // em vez de empilhar texto ilegível na base do gráfico.
+  function hideCrowdedLabels() {
+    const items = [...phaseLabelsEl.children];
+    let prevRight = -Infinity;
+    for (const el of items) {
+      el.style.visibility = '';
+      const left = el.offsetLeft - el.offsetWidth / 2;
+      if (left < prevRight + 8) { el.style.visibility = 'hidden'; continue; }
+      prevRight = left + el.offsetWidth;
     }
   }
 
@@ -201,7 +242,12 @@ export function createChart(host, opts = {}) {
     axisX.style.marginRight = `${cfg.gap + (mode === 'plan' ? 0 : 26)}px`;
   }
 
-  const setLine = (node, pairs, vmax, tMax) => node.setAttribute('points', pointsOf(pairs, vmax, tMax));
+  // `straight` para as curvas do PLANO: são degraus (cada step repete o X ao trocar
+  // de patamar) e a suavização Catmull-Rom transformaria isso em laços.
+  const setLine = (node, pairs, vmax, tMax, straight) => {
+    const pts = pairs && pairs.length ? toXY(pairs, vmax, tMax) : [];
+    node.setAttribute('d', cfg.smooth && !straight ? curvePath(pts) : linePath(pts));
+  };
 
   function tMaxLive(elapsed) {
     if (!cfg.staticOn) return Math.max(5, elapsed);
@@ -222,8 +268,8 @@ export function createChart(host, opts = {}) {
       const b = buffers || { pressure: [], flow: [], temp: [], weight: [] };
       const elapsed = (last(b.pressure) || [0])[0] || 0;
       const tMax = tMaxLive(elapsed);
-      setLine(line.pressTarget, targets && targets.pressure, V_PF, tMax);
-      setLine(line.flowTarget, targets && targets.flow, V_PF, tMax);
+      setLine(line.pressTarget, targets && targets.pressure, V_PF, tMax, true);
+      setLine(line.flowTarget, targets && targets.flow, V_PF, tMax, true);
       setLine(line.press, b.pressure, V_PF, tMax);
       setLine(line.flow, b.flow, V_PF, tMax);
       setLine(line.temp, b.temp, V_TEMP, tMax);
@@ -231,11 +277,11 @@ export function createChart(host, opts = {}) {
       const lp = last(b.pressure), lf = last(b.flow), lt = last(b.temp), lw = last(b.weight);
       renderLabels([
         { color: 'var(--red)',   pair: lt, vmax: V_TEMP,   text: lt ? `${lt[1].toFixed(0)} °C` : null },
-        { color: 'var(--green)', pair: lp, vmax: V_PF,     text: lp ? `${lp[1].toFixed(1)} bar` : null },
+        { color: 'var(--green)', pair: lp, vmax: V_PF,     text: lp ? `${lp[1].toFixed(1)} Pressure` : null },
         { color: 'var(--amber)', pair: lw, vmax: V_WEIGHT, text: lw ? `${lw[1].toFixed(1)} g` : null },
-        { color: 'var(--blue)',  pair: lf, vmax: V_PF,     text: lf ? `${lf[1].toFixed(1)} ml/s` : null },
+        { color: 'var(--blue)',  pair: lf, vmax: V_PF,     text: lf ? `${lf[1].toFixed(1)} Flow` : null },
       ], tMax);
-      renderPhases(null);
+      renderPhases(livePhases, tMax);
       renderAxisX(tMax);
       return;
     }
@@ -243,8 +289,8 @@ export function createChart(host, opts = {}) {
     const v = view;
     if (!v) return;
     const tMax = Math.max(1, v.duration || 30);
-    setLine(line.pressTarget, v.pressureTarget, V_PF, tMax);
-    setLine(line.flowTarget, v.flowTarget, V_PF, tMax);
+    setLine(line.pressTarget, v.pressureTarget, V_PF, tMax, true);
+    setLine(line.flowTarget, v.flowTarget, V_PF, tMax, true);
     setLine(line.press, v.pressure, V_PF, tMax);
     setLine(line.flow, v.flow, V_PF, tMax);
     setLine(line.temp, v.temp, V_TEMP, tMax);
@@ -254,9 +300,9 @@ export function createChart(host, opts = {}) {
     const isShot = mode === 'shot';
     renderLabels([
       { color: 'var(--red)',   pair: lt, vmax: V_TEMP,   text: lt ? `${lt[1].toFixed(0)} °C` : null },
-      { color: 'var(--green)', pair: lp, vmax: V_PF,     text: lp ? (isShot ? `${lp[1].toFixed(1)} bar` : 'Pressure') : null },
+      { color: 'var(--green)', pair: lp, vmax: V_PF,     text: lp ? (isShot ? `${lp[1].toFixed(1)} Pressure` : 'Pressure') : null },
       { color: 'var(--amber)', pair: lw, vmax: V_WEIGHT, text: isShot && lw ? `${lw[1].toFixed(1)} g` : null },
-      { color: 'var(--blue)',  pair: lf, vmax: V_PF,     text: lf ? (isShot ? `${lf[1].toFixed(1)} ml/s` : 'Flow') : null },
+      { color: 'var(--blue)',  pair: lf, vmax: V_PF,     text: lf ? (isShot ? `${lf[1].toFixed(1)} Flow` : 'Flow') : null },
     ], tMax);
     renderPhases(v.phases, tMax);
     renderAxisX(tMax);
@@ -291,6 +337,10 @@ export function createChart(host, opts = {}) {
       mode = 'live';
       setThick(true);
       targets = plan ? { pressure: plan.pressure, flow: plan.flow } : null;
+      // rótulo da fase já numerado, como na tela 02 ("1 preinfusion")
+      livePhases = plan && plan.phases && plan.phases.length
+        ? plan.phases.map((ph, i) => ({ ...ph, label: `${i + 1} ${ph.label}` }))
+        : null;
       schedule();
     },
     update(liveShot) { if (mode !== 'live') return; buffers = liveShot; schedule(); },

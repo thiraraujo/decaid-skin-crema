@@ -10,10 +10,37 @@ const W = [[0,0],[8,0],[14,1],[20,18],[26,34],[30,42]];
 const T_MAX = 30;
 const TICK_MS = 100;   // ~10 Hz, como o /machine/snapshot do Bridge
 
+// steps do perfil simulado — dão nome aos blocos de fase da tela 02
+const SIM_STEPS = [
+  { name: 'Prefill', seconds: 6, temperature: 88 },
+  { name: 'Preinfusion', seconds: 10, temperature: 88 },
+  { name: 'Dripping', seconds: 4, temperature: 88 },
+  { name: 'Pressurize', seconds: 6, temperature: 88 },
+  { name: 'Extraction', seconds: 23, temperature: 88 },
+  { name: 'Decline', seconds: 10, temperature: 88 },
+];
+const SIM_TOTAL = SIM_STEPS.reduce((a, s) => a + s.seconds, 0);
+
+// índice do step para o instante `t` do shot simulado (T_MAX comprimido em SIM_TOTAL)
+function simFrame(t) {
+  const scaled = t / T_MAX * SIM_TOTAL;
+  let acc = 0;
+  for (let i = 0; i < SIM_STEPS.length; i++) {
+    acc += SIM_STEPS[i].seconds;
+    if (scaled < acc) return i;
+  }
+  return SIM_STEPS.length - 1;
+}
+
 const PROFILES = [
   { key: 'rao-allonge', id: 'rao-allonge', name: 'Rao Allongé', duration: 59,
     pressure: [[0,0],[14,0],[14,9],[30,9],[30,6],[59,6]], flow: [[0,4],[14,4],[14,2],[59,2]], temp: [[0,88],[59,88]],
-    phases: [{ start: 0, end: 14, label: 'preinfusion' }, { start: 14, end: 44, label: 'extraction' }, { start: 44, end: 59, label: 'decline' }] },
+    phases: [
+      { start: 0, end: 6, label: 'prefill' }, { start: 6, end: 16, label: 'preinfusion' },
+      { start: 16, end: 20, label: 'dripping' }, { start: 20, end: 26, label: 'pressurize' },
+      { start: 26, end: 49, label: 'extraction' }, { start: 49, end: 59, label: 'decline' },
+    ],
+    raw: { title: 'Rao Allongé', tank_temperature: 88, steps: SIM_STEPS } },
   { key: 'best-practice', id: 'best-practice', name: 'Best practice', duration: 32,
     pressure: [[0,0],[3,2.5],[9,3],[10,9],[16,9],[32,8]], flow: [[0,3],[9,3],[10,2],[32,1.9]], temp: [[0,94.5],[32,94.5]],
     phases: [{ start: 0, end: 10, label: 'preinfusion' }, { start: 10, end: 32, label: 'extraction' }] },
@@ -95,14 +122,14 @@ export function createMockSource() {
 
   function emitIdle() {
     for (const cb of snapshotCbs) {
-      cb({ t: 0, running: false, state: 'idle', pressure: 0, flow: 0, mixTemp: 92.0, groupTemp: 92.0, temp: 92.0, tankPct, tankMl: Math.round(tankPct * 14.9) });
+      cb({ t: 0, running: false, state: 'idle', frame: null, pressure: 0, flow: 0, mixTemp: 92.0, groupTemp: 92.0, temp: 92.0, tankPct, tankMl: Math.round(tankPct * 14.9) });
     }
   }
 
   function tick() {
     t += TICK_MS / 1000;
     for (const cb of snapshotCbs) {
-      cb({ t, running: true, state: 'espresso', pressure: sample(P, t), flow: sample(F, t), mixTemp: 92.4, groupTemp: 94.1, temp: sample(T, t), tankPct, tankMl: Math.round(tankPct * 14.9) });
+      cb({ t, running: true, state: 'espresso', frame: simFrame(t), pressure: sample(P, t), flow: sample(F, t), mixTemp: 92.4, groupTemp: 94.1, temp: sample(T, t), tankPct, tankMl: Math.round(tankPct * 14.9) });
     }
     const weight = scaleConnected ? Math.max(0, sample(W, t) - tareOffset) : 0;
     for (const cb of scaleCbs) cb({ weight, connected: scaleConnected });

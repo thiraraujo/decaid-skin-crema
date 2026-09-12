@@ -4,9 +4,9 @@ Skin web (HTML/CSS/JS, sem bundler) para o app **Decaid** / bridge **ReaPrime**.
 Redesign completo da v1: antes do shot, a tela lê de um golpe **Café · Moedor · Grind ·
 Ratio · Brew** e o plano do perfil; durante o shot, **o gráfico toma a tela**.
 
-> 📐 **Handoff de design (11 telas + tokens + regras):** `docs/handoff-v2/` no repo de
-> trabalho — `README.md` é a especificação e `CREMA v2 - Telas finais.dc.html` abre no
-> navegador com todas as telas.
+> 📐 **Handoff de design:** `docs/handoff-v2/` (11 telas) e `docs/handoff-shot-live/`
+> (tela 02 redesenhada) no repo de trabalho — o `README.md` de cada pacote é a
+> especificação e os `.dc.html` abrem no navegador.
 
 ## Linhas de versão
 
@@ -24,7 +24,7 @@ branch `v2`. As atualizações chegam por *Check for updates* (ETag).
 | # | Tela | Onde mora |
 |---|---|---|
 | 01 | Home (idle) | `index.html` + `src/ui.js` |
-| 02 | Home (shot ao vivo) | `.home.is-live` + `src/chart.js` |
+| 02 | Shot ao vivo | `src/live.js` (`#live` + gráfico próprio) |
 | 03 | Adjustments (flush / água / vapor) | `src/screens.js` |
 | 04 | Teclado numérico | `src/numpad.js` |
 | 05/06 | Coffee & Grinder (selecionar / criar) | `src/screens.js` |
@@ -33,7 +33,16 @@ branch `v2`. As atualizações chegam por *Check for updates* (ETag).
 | 10 | Edit shot | `src/history.js` |
 | 11 | Estados da máquina (pílula) | `.state-pill` em `css/main.css` |
 
-Favoritos (`✎ favoritos`) têm um gerenciador próprio em `src/screens.js`.
+Favoritos (`✎ favoritos`) têm um gerenciador próprio em `src/screens.js`: lista **todos**
+os perfis da máquina (73 no Bridge de teste), com busca por nome, e marca até 5 para o
+carrossel.
+
+A tela 02 mostra um bloco por fase do perfil conforme o shot avança (Yield / Temp /
+Pressure / Flow por fase). As fases vêm dos steps do perfil; a fase corrente, de
+`profileFrame` no snapshot — sem esse campo, dos tempos planejados.
+
+No histórico, **Apply** copia café, moedor, moagem, dose e drink do shot para a tela
+principal (e para o workflow da máquina); **Edit** corrige os dados daquele shot.
 
 ## Estrutura
 
