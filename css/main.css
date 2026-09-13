@@ -25,8 +25,12 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   pointer-events: none; visibility: hidden; z-index: -1;
 }
 
+/* `fixed`, não `absolute`: o canvas tem 1320×800 de layout mesmo escalado, e como
+   absolute ele criava área rolável além da tela — no tablet, arrastar o dedo para cima
+   ou para a esquerda rolava a página e a skin saía do lugar (fotos IMG_0500–0503).
+   Elemento fixed não entra na área de rolagem do documento. */
 .app {
-  position: absolute; top: 0; left: 0;
+  position: fixed; top: 0; left: 0;
   width: 1320px; height: 800px;
   transform-origin: 0 0;
 }
