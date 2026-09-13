@@ -100,7 +100,7 @@ Detecção de host em `src/api.js`: `window.REA_HOST` → `localStorage.reaHostn
 |---|---|
 | WS `/ws/v1/machine/snapshot` | gráfico ao vivo, Mix/Group, estado da máquina |
 | WS `/ws/v1/scale/snapshot` | peso, fluxo gravimétrico e status da balança |
-| WS `/ws/v1/machine/waterLevels` | nível do tanque (mm) e limiar de recarga |
+| WS `/ws/v1/machine/waterLevels` | nível do tanque (mm → ml → %) e limiar de recarga |
 | WS `/ws/v1/devices` | estado de conexão da máquina e da balança + erros de BLE |
 | WS `/ws/v1/display` | wake-lock (tela sempre acesa) |
 | `GET /profiles` | carrossel de favoritos e curvas planejadas |
@@ -197,9 +197,12 @@ então enviar `hotWaterData: {volume}` preserva `duration` e `flow`.
 na segunda. Ler as duas antes de supor qualquer coisa.
 
 - **Tanque.** O nível vem por `ws/v1/machine/waterLevels`, em **milímetros**
-  (`currentLevel` + `refillLevel`), não por REST. A skin mostra `NNmm` e acende o
-  aviso quando `currentLevel <= refillLevel`, igual ao app oficial — a conversão
-  mm→ml depende da geometria do tanque e não é informada em lugar nenhum.
+  (`currentLevel` + `refillLevel`), não por REST. A conversão mm→ml usa a tabela da
+  skin de referência Bestpresso (`src/api/decaid/adapters.ts · MM_TO_ML`), a mesma do
+  de1app (`vars.tcl · water_tank_level_to_milliliters`, do CAD do tanque). A skin mostra
+  `ml` e `%` sobre **2000 ml = tanque cheio** (`TANK_FULL_ML`, definido pelo usuário);
+  âmbar abaixo de 20 %, vermelho abaixo de 10 %; aviso de recarga quando a máquina está
+  em `needsWater` ou `currentLevel <= refillLevel`.
 - **Balança.** `ws/v1/scale/snapshot` emite **dois** tipos de frame no mesmo socket:
   `{status}` (só ao abrir e a cada mudança de conexão) e `{weight, weightFlow,
   battery, timerValue}` (só enquanto conectada). Tratar os dois como um zera o peso

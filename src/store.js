@@ -45,7 +45,7 @@ export const state = {
     targetMixTemp: null, targetGroupTemp: null,
     // nível do tanque em MILÍMETROS (ws/v1/machine/waterLevels) — a DE1 reporta
     // altura da água, não volume; `refill` é o limiar de recarga da máquina
-    water: { level: null, refill: null, fullScale: 70 },
+    water: { level: null, refill: null },   // mm, como vêm de ws/v1/machine/waterLevels
     scale: { connected: false, weight: 0, flow: null, battery: null },
     link: { machine: null, scale: null, scanning: false, phase: null },  // /ws/v1/devices
     error: null,        // ConnectionError do canal /devices ({kind, message, suggestion})
@@ -127,4 +127,20 @@ export function ratioText() {
   const { dose, drink } = state.recipe;
   if (!dose || !drink) return '—';
   return `1:${(drink / dose).toFixed(1)}`;
+}
+
+// ---------- tanque ----------
+// O Decaid entrega o nível do tanque só em mm (ws/v1/machine/waterLevels; a própria
+// tela nativa mostra "50mm"). Conversão mm → ml pela tabela da skin de referência
+// Bestpresso (src/api/decaid/adapters.ts · MM_TO_ML), a mesma do de1app
+// (vars.tcl · water_tank_level_to_milliliters, calculada do CAD do tanque).
+// Índice = mm inteiros; acima do fim da tabela vale o último valor.
+const TANK_MM_TO_ML = [0,16,43,70,97,124,151,179,206,233,261,288,316,343,371,398,426,453,481,509,537,564,592,620,648,676,704,732,760,788,816,844,872,900,929,957,985,1013,1042,1070,1104,1138,1172,1207,1242,1277,1312,1347,1382,1417,1453,1488,1523,1559,1594,1630,1665,1701,1736,1772,1808,1843,1879,1915,1951,1986,2022,2058];
+
+/** capacidade considerada como tanque cheio (definida pelo usuário) */
+export const TANK_FULL_ML = 2000;
+
+export function tankMillilitres(mm) {
+  const i = Math.max(0, Math.floor(mm));
+  return TANK_MM_TO_ML[Math.min(i, TANK_MM_TO_ML.length - 1)];
 }
