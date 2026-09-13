@@ -1,7 +1,7 @@
 // CREMA v2 · tela principal (01 Home idle / 02 shot ao vivo).
 // Render puro a partir de `state` + interações da coluna da receita, carrossel e rodapé.
 
-import { state, setState, FIELDS, PRESETS, fieldFor, ratioText, clampStaticSeconds } from './store.js';
+import { state, setState, FIELDS, PRESETS, fieldFor, ratioText, clampStaticSeconds, tankMillilitres, TANK_FULL_ML } from './store.js';
 import { miniChart } from './chart.js';
 import { sleepMachine, wakeMachine, openAppSettings } from './host.js';
 import { syncSaver } from './saver.js';
@@ -178,13 +178,15 @@ function renderTank() {
     return;
   }
 
-  const pct = Math.max(0, Math.min(100, (level / water.fullScale) * 100));
+  // mm → ml (tabela do tanque) → % de TANK_FULL_ML; cores do handoff: <20% âmbar, <10% vermelho
+  const ml = tankMillilitres(level);
+  const pct = Math.max(0, Math.min(100, (ml / TANK_FULL_ML) * 100));
   $('tank-fill').style.height = `${pct}%`;
   $('tank-pct').style.bottom = `${pct}%`;
-  $('tank-pct').textContent = `${Math.round(level)}`;
-  valueWithUnit($('tank-ml'), String(Math.round(level)), ' mm');
-  tank.classList.toggle('is-low', !needsWater && pct < 25);
-  tank.classList.remove('is-critical');
+  $('tank-pct').textContent = `${Math.round(pct)}%`;
+  valueWithUnit($('tank-ml'), String(ml), ' ml');
+  tank.classList.toggle('is-critical', !needsWater && pct < 10);
+  tank.classList.toggle('is-low', !needsWater && pct >= 10 && pct < 20);
 }
 
 // ================= carrossel de favoritos =================

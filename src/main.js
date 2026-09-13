@@ -230,7 +230,6 @@ async function boot() {
       const water = state.machine.water;
       water.level = w.currentLevel;
       water.refill = w.refillLevel;
-      if (w.currentLevel != null && w.currentLevel > water.fullScale) water.fullScale = Math.ceil(w.currentLevel);
       renderMachine();
     });
   }
