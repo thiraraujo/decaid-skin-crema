@@ -75,11 +75,22 @@ export async function openAppSettings() {
   const url = `http://${resolveHost()}${path}?backName=CREMA`;
   console.info('[CREMA] abrindo Settings:', url);
   const here = location.href;
+  // A página de settings do app pode levar vários segundos para responder no tablet:
+  // enquanto a navegação está em curso (beforeunload/pagehide já dispararam) não há
+  // aviso nem segunda tentativa. Só se nada acontecer em 10 s é que tentamos abrir
+  // numa aba e, se nem isso, avisamos.
+  let leaving = false;
+  const mark = () => { leaving = true; };
+  window.addEventListener('beforeunload', mark);
+  window.addEventListener('pagehide', mark);
   try { window.location.assign(url); } catch (e) { console.warn('[CREMA] assign falhou', e); }
-  // Uma WebView pode barrar a navegação sem lançar erro: se continuamos na mesma
-  // página depois de um instante, tenta abrir numa aba e, se nem isso, avisa.
-  await new Promise((r) => setTimeout(r, 1200));
-  if (location.href !== here) return true;
+  const t0 = Date.now();
+  while (Date.now() - t0 < 10000) {
+    await new Promise((r) => setTimeout(r, 250));
+    if (leaving || location.href !== here) return true;
+  }
+  window.removeEventListener('beforeunload', mark);
+  window.removeEventListener('pagehide', mark);
   const win = window.open(url, '_blank');
   if (win) return true;
   console.warn('[CREMA] o host bloqueou a navegação para', url);

@@ -437,10 +437,31 @@ export function initUI(chartInstance, dataSource, liveChart) {
   // --- topo ---
   $('btn-sleep').addEventListener('click', () => sleepMachine());
   $('btn-theme').addEventListener('click', () => openThemes());
-  $('sleep-veil').addEventListener('click', () => wakeMachine());
+  // véu padrão: acorda com toque curto OU longo. `click` não serve — no Android um
+  // toque longo vira menu de contexto e o click nunca chega.
+  const veil = $('sleep-veil');
+  let veilTimer = null;
+  const veilWake = () => { clearTimeout(veilTimer); veilTimer = null; wakeMachine(); };
+  veil.addEventListener('pointerdown', (e) => {
+    try { veil.setPointerCapture(e.pointerId); } catch { /* sem captura */ }
+    clearTimeout(veilTimer);
+    veilTimer = setTimeout(veilWake, 1000);
+  });
+  veil.addEventListener('pointerup', () => { if (veilTimer) veilWake(); });
+  veil.addEventListener('contextmenu', (e) => e.preventDefault());
+  // SETTINGS: resposta imediata no botão enquanto a página do app carrega
   $('btn-settings').addEventListener('click', async () => {
+    const btn = $('btn-settings');
+    if (btn.dataset.busy) return;
+    btn.dataset.busy = '1';
+    const original = btn.innerHTML;
+    btn.classList.add('is-busy');
+    btn.lastChild.textContent = ' OPENING…';
     const ok = await openAppSettings();
-    if (!ok) flash($('btn-settings'), 'unavailable');
+    const restore = () => { btn.innerHTML = original; btn.classList.remove('is-busy'); delete btn.dataset.busy; };
+    if (!ok) { restore(); flash(btn, 'UNAVAILABLE'); return; }
+    // voltou pelo histórico do navegador (página preservada): o botão volta ao normal
+    window.addEventListener('pageshow', restore, { once: true });
   });
   $('edit-favorites').addEventListener('click', () => openProfiles());
 
@@ -459,6 +480,8 @@ export function initUI(chartInstance, dataSource, liveChart) {
   $('shot-prev').addEventListener('click', () => stepShot(+1));
   $('shot-next').addEventListener('click', () => stepShot(-1));
   $('lastshot-body').addEventListener('click', () => openHistory(state.history[state.shotIndex]));
+  // toque no mini-gráfico: plota esse shot no gráfico principal
+  $('lastshot-mini').addEventListener('click', () => showShotInChart());
   // CONNECT força a conexão BT na hora (api.js: /devices/connect, com scan de
   // reserva). Enquanto isso o botão mostra o progresso — o scan pode demorar.
   $('scale-connect').addEventListener('click', async () => {
@@ -532,9 +555,27 @@ function stepShot(dir) {
   const n = state.history.length;
   if (!n) return;
   state.shotIndex = Math.min(n - 1, Math.max(0, state.shotIndex + dir));
+  showShotInChart();
+}
+
+// O gráfico principal mostra o shot do rodapé. O histórico chega sem as curvas (só o
+// primeiro vem completo): busca as do shot escolhido e redesenha quando chegarem.
+let shotLoadToken = 0;
+function showShotInChart() {
   state.chartMode = 'lastShot';
   renderLastShot();
   renderChart();
+  const s = state.history[state.shotIndex];
+  if (!s || s.series || !source || !source.getShot) return;
+  const token = ++shotLoadToken;
+  source.getShot(s.id).then((series) => {
+    if (!series) return;
+    s.series = series;
+    s.duration = s.duration ?? series.duration;
+    if (s.brewTemp == null && series.brewTemp != null) s.brewTemp = series.brewTemp;
+    if (token !== shotLoadToken || state.history[state.shotIndex] !== s) return;
+    if (state.chartMode === 'lastShot') { renderLastShot(); renderChart(); }
+  }).catch((e) => console.warn('[CREMA] curvas do shot', s.id, e));
 }
 
 export function setRecipe(patch) {

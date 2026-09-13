@@ -171,7 +171,7 @@ function build() {
   el.className = 'saver';
   el.hidden = true;
   el.innerHTML = `
-    <img class="saver__img" alt="">
+    <img class="saver__img" alt="" draggable="false">
     <div class="saver__hint" hidden>
       <span class="saver__hint-text"></span>
       <span class="saver__hold"><i></i></span>
@@ -181,9 +181,13 @@ function build() {
   hintEl = el.querySelector('.saver__hint');
   hintText = el.querySelector('.saver__hint-text');
 
+  // No Android, segurar o dedo sobre uma imagem abre o menu dela e CANCELA o toque
+  // (pointercancel). Por isso a imagem não recebe toques, o menu é bloqueado e só o
+  // soltar do dedo interrompe o toque longo — um cancelamento do sistema, não.
   el.addEventListener('pointerdown', onPress);
-  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(ev, onRelease);
+  el.addEventListener('pointerup', onRelease);
   el.addEventListener('contextmenu', (e) => e.preventDefault());
+  el.addEventListener('dragstart', (e) => e.preventDefault());
 }
 
 const hintLabel = () => (active === 'preview' ? 'Hold to close preview' : 'Hold to wake');
@@ -198,6 +202,7 @@ function showHint(holding) {
 
 function onPress(e) {
   e.preventDefault();
+  try { el.setPointerCapture(e.pointerId); } catch { /* sem captura */ }
   pressAt = performance.now();
   clearTimeout(holdTimer);
   // reinicia a barra de progresso do toque longo

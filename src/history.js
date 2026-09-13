@@ -90,10 +90,15 @@ function build() {
   });
 }
 
+// Filtro por café. Shots reais muitas vezes vêm só com o NOME do café (sem id de
+// bean), então o filtro vale pelo rótulo e usa o id apenas quando os dois lados têm.
+const filterOn = () => !!state.historyFilter.coffeeLabel;
 function visible() {
   const f = state.historyFilter;
-  if (!f.coffeeId) return state.history;
-  return state.history.filter((s) => s.coffeeId === f.coffeeId || s.coffee === f.coffeeLabel);
+  if (!filterOn()) return state.history;
+  return state.history.filter((s) => (f.coffeeId && s.coffeeId
+    ? s.coffeeId === f.coffeeId
+    : (s.coffee || 'No coffee') === f.coffeeLabel));
 }
 
 const selected = () => state.history.find((s) => s.id === state.selectedShotId) || visible()[0] || null;
@@ -104,9 +109,9 @@ function paint() {
 
   const f = state.historyFilter;
   const fEl = screenEl.querySelector('#hs-filter');
-  fEl.hidden = !f.coffeeId;
-  screenEl.querySelector('#hs-search').classList.toggle('is-on', !!f.coffeeId);
-  if (f.coffeeId) {
+  fEl.hidden = !filterOn();
+  screenEl.querySelector('#hs-search').classList.toggle('is-on', filterOn());
+  if (filterOn()) {
     fEl.innerHTML = `<span class="chip chip--filter">${esc(f.coffeeLabel)}<button class="chip__x tap" data-clear="1" type="button">×</button></span>`;
   }
 
