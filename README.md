@@ -46,7 +46,15 @@ As categorias saem do próprio título, que o Decaid escreve como `Categoria/Nom
 (`Pour over basket/V60 22g in, 375g out`, `D-Flow / default`).
 
 Dose, Drink e Brew usam presets em botão redondo (18/20/22 g · 36/40/45 g · 88/92/95 °C);
-o toque no número abre o teclado para valores fora da lista. O Grind mantém a régua.
+o toque no número abre o teclado para valores fora da lista. O Grind tem régua e botões
+− / + ao lado do número; o passo vem do moedor cadastrado no Decaid
+(`Grinder.settingSmallStep`) e, sem esse dado, é 0,05. O nome do café diminui quando
+quebra linha (46 px → 34 px em duas linhas → 28 px).
+
+O carrossel de favoritos é contínuo: os cards acompanham o dedo durante o arrasto
+(tamanho, posição e miolo interpolados) e, ao soltar, deslizam até a vaga final — só
+então o perfil troca na máquina. Toque num card lateral desliza até ele; arrasto curto
+volta ao lugar; arremesso rápido troca mesmo sem passar da metade.
 
 A tela 02 mostra um bloco por fase do perfil conforme o shot avança (Yield / Temp /
 Pressure / Flow por fase). As fases vêm dos steps do perfil; a fase corrente, de

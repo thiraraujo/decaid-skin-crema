@@ -332,7 +332,8 @@ async function loadLibrary(source) {
     id: b.id, name: b.name || b.coffeeName || '—',
     brand: b.roaster || b.brand || '', process: b.process || b.processing || '',
   }));
-  state.grinders = grinders.map((g) => ({ id: g.id, name: g.model || g.name || '—' }));
+  // settingSmallStep: passo do − / + do Grind, cadastrado no moedor do Decaid
+  state.grinders = grinders.map((g) => ({ id: g.id, name: g.model || g.name || '—', smallStep: g.settingSmallStep ?? null }));
 
   // A receita vem do que JÁ está carregado na máquina (GET /workflow → context).
   // Sem isso a skin sobrescreveria o próximo shot com o primeiro café da biblioteca.
