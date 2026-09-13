@@ -173,7 +173,9 @@ html.is-loading .app { opacity: 0; transition: none; }
 .rail__grinder { font: 600 20px var(--sans); color: var(--text); }
 .rail__caret { color: var(--label); font-size: 15px; margin-left: 4px; }
 
-.rail__grind { display: block; width: 100%; font-size: 36px; line-height: 1.1; margin-top: 2px; }
+.rail__grind-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 2px; }
+.rail__grind { display: block; flex: 1; min-width: 0; font-size: 36px; line-height: 1.1; }
+.rail__grind-row .stepper[disabled] { opacity: .3; }
 
 .rail__ratio {
   width: 100%; margin-top: auto;
@@ -250,44 +252,42 @@ html.is-loading .app { opacity: 0; transition: none; }
 }
 
 /* ---------- carrossel de favoritos ---------- */
-.carousel { height: 126px; flex: none; position: relative; transition: opacity .2s ease-out; touch-action: none; }
+/* recorte só nas laterais: o card que entra/sai no arrasto não invade a coluna nem o
+   tanque, e a sombra do card central continua visível para baixo */
+.carousel { height: 126px; flex: none; position: relative; transition: opacity .2s ease-out; touch-action: none; clip-path: inset(-120px 0 -120px 0); }
+/* geometria (left/top/width/height/opacity) vem do JS por card — ver layoutCarousel() */
 .carousel__card {
-  position: absolute; top: 0; left: 50%; overflow: hidden;
-  width: 440px; height: 126px; margin-left: -220px;
-  border-radius: 18px; overflow: hidden;
-  display: flex; align-items: center; gap: 20px;
-  color: #fff;
-  transition: transform .28s ease-out, opacity .28s ease-out, width .28s ease-out, height .28s ease-out;
-}
-.carousel__card--center {
-  background: var(--profile-card);
-  box-shadow: var(--shadow-profile);
-  z-index: 3;
-}
-.carousel__card--near {
-  width: 220px; height: 94px; margin-left: 0; top: 16px;
-  opacity: .9; z-index: 2;
+  position: absolute; overflow: hidden;
+  border-radius: 20px;
   background: var(--surface-2); border: 1px solid var(--border-soft);
   color: var(--text-2);
-  padding: 16px 20px; border-radius: 20px;
-  font: 600 17px var(--sans);
+  padding: 0; text-align: left;
+  will-change: left, width, height, opacity;
 }
-.carousel__card--far {
-  width: 210px; height: 76px; margin-left: 0; top: 28px;
-  opacity: .6; z-index: 1;
-  background: var(--surface); border: 1px solid var(--hairline);
-  color: var(--text-2);
-  padding: 14px 18px; border-radius: 20px;
-  font: 600 16px var(--sans);
+.carousel__card.is-center { box-shadow: var(--shadow-profile); }
+.carousel__hero {
+  position: absolute; inset: -1px;
+  background: var(--profile-card);
+  pointer-events: none;
+}
+.carousel__full {
+  position: absolute; left: -1px; top: -1px; width: 440px; height: 126px;
+  display: flex; align-items: center; gap: 20px;
+  color: #fff; pointer-events: none;
 }
 .carousel__mini {
   width: 160px; height: 126px; flex: none;
-  border-radius: 18px 0 0 18px;
   background: rgba(0,0,0,.18);   /* sobre o gradiente azul: igual em todos os temas */
 }
+.carousel__text { display: flex; flex-direction: column; min-width: 0; padding-right: 18px; }
 .carousel__name { font: 600 24px/1.1 var(--sans); }
 .carousel__meta { font: 400 14px var(--mono); opacity: .85; margin-top: 6px; }
-.carousel__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; width: 100%; }
+.carousel__label {
+  position: absolute; inset: 0; display: flex; align-items: center;
+  padding: 0 20px; font: 600 17px var(--sans);
+  pointer-events: none;
+}
+.carousel__label > span { display: block; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
 /* ---------- card do gráfico ---------- */
 .chart-card { flex: 1; min-width: 0; padding: 20px 26px; display: flex; flex-direction: column; }

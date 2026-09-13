@@ -45,6 +45,9 @@ export function renderRecipe() {
 
   $('grinder-name').innerHTML = `${r.grinderName || DASH}<span class="rail__caret">⌄</span>`;
   $('grind-value').textContent = fmt(r.grind, 2);
+  $('grind-minus').disabled = r.grind == null;
+  $('grind-plus').disabled = r.grind == null;
+  fitCoffeeName();
   valueWithUnit($('dose-value'), fmtInt(r.dose), 'g');
   valueWithUnit($('drink-value'), fmtInt(r.drink), 'g');
   valueWithUnit($('brew-value'), fmtInt(r.brewTemp), '°C');
@@ -190,52 +193,88 @@ function renderTank() {
 }
 
 // ================= carrossel de favoritos =================
-// 5 slots: central (selecionado), ±1 "near", ±2 "far". Swipe/toque troca a seleção.
+// Contínuo: cada card tem uma posição p (0 = centro, ±1 vizinhos, ±2 pontas, ±3 fora da
+// vista). Tamanho, posição, opacidade e o miolo (azul com mini-gráfico ↔ só o nome) saem
+// de p por interpolação. Assim, durante o arrasto os cards acompanham o dedo e, ao
+// soltar, deslizam até a posição final — só então o perfil troca (e grava na máquina).
+const CAR_LEVELS = [   // por |p| = 0, 1, 2, 3 (medidas do handoff)
+  { w: 440, h: 126, top: 0,  op: 1,  cx: null },   // centro: no meio do trilho
+  { w: 220, h: 94,  top: 16, op: .9, cx: 230 },    // borda a 120px do trilho
+  { w: 210, h: 76,  top: 28, op: .6, cx: 105 },    // rente à borda
+  { w: 200, h: 70,  top: 32, op: 0,  cx: -110 },   // saindo
+];
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+
+function carouselGeometry(p, width) {
+  const ap = Math.min(3, Math.abs(p));
+  const i = Math.min(2, Math.floor(ap));
+  const t = ap - i;
+  const A = CAR_LEVELS[i], B = CAR_LEVELS[i + 1];
+  const side = (lv) => (lv.cx == null ? width / 2 : (p < 0 ? lv.cx : width - lv.cx));
+  const w = lerp(A.w, B.w, t), h = lerp(A.h, B.h, t);
+  return {
+    left: lerp(side(A), side(B), t) - w / 2, top: lerp(A.top, B.top, t), w, h,
+    op: lerp(A.op, B.op, t), hero: clamp01(1 - ap),
+    // miolo do centro some antes da metade do caminho e o rótulo lateral só aparece
+    // depois dela: no meio do arrasto os dois cards nunca mostram texto sobreposto
+    full: clamp01(1 - ap * 2.2), label: clamp01((ap - 0.45) * 2.2), z: 100 - Math.round(ap * 20),
+  };
+}
+
+let carouselOffset = 0;   // deslocamento do arrasto, em "vagas" (negativo = para a esquerda)
+
+function layoutCarousel(offset = carouselOffset) {
+  const host = $('carousel');
+  if (!host) return;
+  carouselOffset = offset;
+  const width = host.clientWidth;
+  for (const card of host.querySelectorAll('.carousel__card')) {
+    const g = carouselGeometry(Number(card.dataset.d) + offset, width);
+    const st = card.style;
+    st.left = `${g.left.toFixed(1)}px`; st.top = `${g.top.toFixed(1)}px`;
+    st.width = `${g.w.toFixed(1)}px`; st.height = `${g.h.toFixed(1)}px`;
+    st.opacity = g.op.toFixed(3); st.zIndex = String(g.z);
+    st.pointerEvents = g.op < 0.05 ? 'none' : '';
+    card.querySelector('.carousel__hero').style.opacity = g.hero.toFixed(3);
+    card.querySelector('.carousel__full').style.opacity = g.full.toFixed(3);
+    card.querySelector('.carousel__label').style.opacity = g.label.toFixed(3);
+    card.classList.toggle('is-center', Math.abs(Number(card.dataset.d) + offset) < 0.5);
+  }
+}
+
 export function renderCarousel() {
   const host = $('carousel');
-  const favs = state.profiles.favorites;
   host.innerHTML = '';
+  carouselOffset = 0;
+  const favs = state.profiles.favorites;
   if (!favs.length) return;
 
   const n = favs.length;
   const sel = Math.max(0, favs.findIndex((p) => p.key === state.selectedProfileId));
-  // camadas laterais ancoradas às bordas do trilho: ±1 a 120px, ±2 rente à borda
-  const EDGE = { 1: 120, 2: 0 };
-
-  for (let d = -2; d <= 2; d++) {
-    if (d !== 0 && n <= Math.abs(d)) continue;
-    const i = ((sel + d) % n + n) % n;
-    const p = favs[i];
+  for (let d = -3; d <= 3; d++) {
+    if (d !== 0 && n <= Math.min(Math.abs(d), 2)) continue;   // com poucos favoritos, menos vagas
+    const p = favs[((sel + d) % n + n) % n];
     if (!p) continue;
     const card = document.createElement('button');
     card.type = 'button';
-    const ad = Math.abs(d);
-    card.className = `carousel__card ${ad === 0 ? 'carousel__card--center' : ad === 1 ? 'carousel__card--near' : 'carousel__card--far'}`;
-    if (d !== 0) {
-      card.style.left = d < 0 ? `${EDGE[ad]}px` : 'auto';
-      card.style.right = d > 0 ? `${EDGE[ad]}px` : 'auto';
-    }
+    card.className = 'carousel__card';
     card.dataset.key = p.key;
-
-    if (d === 0) {
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      svg.setAttribute('class', 'carousel__mini');
-      svg.setAttribute('preserveAspectRatio', 'none');
-      card.appendChild(svg);
-      const box = document.createElement('div');
-      box.innerHTML = `<div class="carousel__name"></div><div class="mono carousel__meta"></div>`;
-      box.querySelector('.carousel__name').textContent = p.name;
-      box.querySelector('.carousel__meta').textContent = planSummary(p);
-      card.appendChild(box);
-      miniChart(svg, p, { width: 160, height: 70, pad: 8 });
-    } else {
-      const lbl = document.createElement('span');
-      lbl.className = 'carousel__label';
-      lbl.textContent = p.name;
-      card.appendChild(lbl);
-    }
+    card.dataset.d = String(d);
+    card.innerHTML = `
+      <span class="carousel__hero"></span>
+      <span class="carousel__full">
+        <svg class="carousel__mini" preserveAspectRatio="none"></svg>
+        <span class="carousel__text"><span class="carousel__name"></span><span class="mono carousel__meta"></span></span>
+      </span>
+      <span class="carousel__label"><span></span></span>`;
+    card.querySelector('.carousel__name').textContent = p.name;
+    card.querySelector('.carousel__meta').textContent = planSummary(p);
+    card.querySelector('.carousel__label > span').textContent = p.name;
+    miniChart(card.querySelector('.carousel__mini'), p, { width: 160, height: 70, pad: 8 });
     host.appendChild(card);
   }
+  layoutCarousel(0);
 }
 
 // "59s · 9→6 bar · 88°" — resumo do plano do perfil
@@ -402,6 +441,38 @@ function bindRuler(id, field, apply) {
   el.addEventListener('pointercancel', end);
 }
 
+// Passo do − / + do Grind: o do moedor cadastrado no Decaid (Grinder.settingSmallStep,
+// rest_v1.yml); sem esse dado, o passo padrão do campo.
+function grindStep() {
+  const g = (state.grinders || []).find((x) => x && x.id === state.recipe.grinderId);
+  const s = g && Number(g.smallStep);
+  return s > 0 ? s : FIELDS.grind.step;
+}
+
+function nudgeGrind(dir) {
+  const cur = state.recipe.grind;
+  if (cur == null) return;   // sem valor lido da máquina não inventa ponto de partida
+  const step = grindStep();
+  const f = fieldFor('grind', cur);
+  const next = Math.round((cur + dir * step) / step) * step;
+  state.recipe.grind = Math.min(f.max, Math.max(f.min, Number(next.toFixed(4))));
+  renderRecipe();
+  pushWorkflow();
+}
+
+// ---------- nome do café ----------
+// 46px numa linha; se quebrar, 34px (até duas linhas); se nem assim couber, 28px.
+const COFFEE_SIZES = [{ px: 46, lines: 1 }, { px: 34, lines: 2 }, { px: 28, lines: 3 }];
+function fitCoffeeName() {
+  const el = $('coffee-name');
+  if (!el) return;
+  for (const s of COFFEE_SIZES) {
+    el.style.fontSize = `${s.px}px`;
+    const lines = Math.round(el.offsetHeight / (s.px * 1.05));
+    if (lines <= s.lines) break;
+  }
+}
+
 function clampStep(v, f) {
   const snapped = Math.round(v / f.step) * f.step;
   return Math.min(f.max, Math.max(f.min, Number(snapped.toFixed(4))));
@@ -426,6 +497,10 @@ export function initUI(chartInstance, dataSource, liveChart) {
     chip.addEventListener('click', () => setBrew(Number(chip.dataset.temp)));
   }
 
+  $('grind-minus').addEventListener('click', () => nudgeGrind(-1));
+  $('grind-plus').addEventListener('click', () => nudgeGrind(+1));
+  // a largura do nome depende da fonte carregada: reajusta quando ela chega
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitCoffeeName);
   bindRuler('grind-ruler', 'grind', {
     get: () => state.recipe.grind,
     set: (v) => { state.recipe.grind = v; renderRecipe(); },
@@ -525,32 +600,92 @@ function bindPresets(id, apply) {
 
 function bindCarousel() {
   const host = $('carousel');
-  const SWIPE_PX = 40;
-  let x0 = null, target = null;
+  const TAP_PX = 8;          // abaixo disso é toque, não arrasto
+  let startX = null, moved = false, target = null, anim = null;
+  let lastX = 0, lastT = 0, velocity = 0;   // vagas por segundo, para o "arremesso"
+
+  const layoutScale = () => (document.querySelector('.app').getBoundingClientRect().width / 1320) || 1;
+  // 1 vaga = distância entre o centro e o vizinho: o card central anda junto com o dedo
+  const slotPx = () => Math.max(60, host.clientWidth / 2 - CAR_LEVELS[1].cx);
+  const favCount = () => state.profiles.favorites.length;
+
+  function animateTo(to, done) {
+    const from = carouselOffset;
+    const dur = Math.min(320, 140 + Math.abs(to - from) * 160);
+    const t0 = performance.now();
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true; anim = null;
+      layoutCarousel(to);
+      if (done) done();
+    };
+    const step = (now) => {
+      if (finished) return;
+      const k = Math.min(1, (now - t0) / dur);
+      layoutCarousel(from + (to - from) * (1 - Math.pow(1 - k, 3)));   // ease-out cúbico
+      if (k < 1) requestAnimationFrame(step); else finish();
+    };
+    anim = { finish };
+    requestAnimationFrame(step);
+    setTimeout(finish, dur + 120);   // se o rAF parar (tela em segundo plano), termina assim mesmo
+  }
+
+  // desloca `shift` vagas e então seleciona o perfil que ficou no centro
+  function settle(shift) {
+    const n = favCount();
+    if (!n || shift === 0) { animateTo(0); return; }
+    const sel = Math.max(0, state.profiles.favorites.findIndex((p) => p.key === state.selectedProfileId));
+    const key = state.profiles.favorites[((sel - shift) % n + n) % n].key;
+    animateTo(shift, () => selectProfile(key));
+  }
 
   host.addEventListener('pointerdown', (e) => {
-    x0 = e.clientX;
+    if (anim) anim.finish();
+    startX = e.clientX; moved = false;
+    lastX = e.clientX; lastT = performance.now(); velocity = 0;
     target = e.target.closest('.carousel__card');
     try { host.setPointerCapture(e.pointerId); } catch { /* mouse sem captura: tudo bem */ }
   });
+
+  host.addEventListener('pointermove', (e) => {
+    if (startX == null) return;
+    const dx = (e.clientX - startX) / layoutScale();
+    if (!moved && Math.abs(dx) < TAP_PX) return;
+    moved = true;
+    let off = dx / slotPx();
+    if (favCount() <= 1) off = Math.max(-0.25, Math.min(0.25, off));   // sem vizinhos: só "elástico"
+    layoutCarousel(off);
+    const now = performance.now();
+    if (now > lastT) velocity = ((e.clientX - lastX) / layoutScale() / slotPx()) / ((now - lastT) / 1000);
+    lastX = e.clientX; lastT = now;
+  });
+
   host.addEventListener('pointerup', (e) => {
-    if (x0 == null) return;
-    // o canvas é escalado por transform: converte px de tela → px de layout
-    const scale = document.querySelector('.app').getBoundingClientRect().width / 1320;
-    const dx = (e.clientX - x0) / (scale || 1);
-    x0 = null;
+    if (startX == null) return;
+    startX = null;
     try { host.releasePointerCapture(e.pointerId); } catch {}
-    const favs = state.profiles.favorites;
-    if (!favs.length) return;
-    if (Math.abs(dx) > SWIPE_PX) {
-      const n = favs.length;
-      const sel = Math.max(0, favs.findIndex((p) => p.key === state.selectedProfileId));
-      selectProfile(favs[((sel + (dx < 0 ? 1 : -1)) % n + n) % n].key);
+    if (!favCount()) return;
+    if (!moved) {
+      // toque num card lateral: desliza até ele
+      const d = target ? Number(target.dataset.d) : 0;
+      if (d) settle(-d);
       return;
     }
-    if (target && target.dataset.key) selectProfile(target.dataset.key);
+    let shift = Math.round(carouselOffset);
+    // arremesso rápido troca mesmo sem passar da metade da vaga
+    if (shift === 0 && Math.abs(velocity) > 1.2 && Math.abs(carouselOffset) > 0.12) shift = Math.sign(carouselOffset);
+    if (favCount() <= 1) shift = 0;
+    settle(Math.max(-2, Math.min(2, shift)));
   });
-  host.addEventListener('pointercancel', () => { x0 = null; target = null; });
+
+  host.addEventListener('pointercancel', () => {
+    if (startX == null) return;
+    startX = null;
+    animateTo(0);
+  });
+
+  window.addEventListener('resize', () => layoutCarousel());
 }
 
 function stepShot(dir) {

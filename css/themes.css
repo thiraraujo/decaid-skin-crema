@@ -618,7 +618,7 @@
 }
 
 /* 2g · ilhas escuras (cards, modais, painéis) */
-:root[data-theme="2g"] .card, :root[data-theme="2g"] .modal, :root[data-theme="2g"] .key, :root[data-theme="2g"] .carousel__card--near, :root[data-theme="2g"] .carousel__card--far, :root[data-theme="2g"] .profiles__panes, :root[data-theme="2g"] .fav-card, :root[data-theme="2g"] .field, :root[data-theme="2g"] .select select, :root[data-theme="2g"] .round-btn, :root[data-theme="2g"] .profiles__search {
+:root[data-theme="2g"] .card, :root[data-theme="2g"] .modal, :root[data-theme="2g"] .key, :root[data-theme="2g"] .carousel__card, :root[data-theme="2g"] .profiles__panes, :root[data-theme="2g"] .fav-card, :root[data-theme="2g"] .field, :root[data-theme="2g"] .select select, :root[data-theme="2g"] .round-btn, :root[data-theme="2g"] .profiles__search {
   --bg: #2A2724;
   --bg-rgb: 42,39,36;
   --surface: #2A2724;
@@ -673,4 +673,4 @@
   --on-profile-text: #D2CBC2;
 }
 
-:root[data-theme="2g"] .card, :root[data-theme="2g"] .modal, :root[data-theme="2g"] .key, :root[data-theme="2g"] .carousel__card--near, :root[data-theme="2g"] .carousel__card--far, :root[data-theme="2g"] .profiles__panes, :root[data-theme="2g"] .fav-card, :root[data-theme="2g"] .field, :root[data-theme="2g"] .select select, :root[data-theme="2g"] .round-btn, :root[data-theme="2g"] .profiles__search { color: var(--text); }
+:root[data-theme="2g"] .card, :root[data-theme="2g"] .modal, :root[data-theme="2g"] .key, :root[data-theme="2g"] .carousel__card, :root[data-theme="2g"] .profiles__panes, :root[data-theme="2g"] .fav-card, :root[data-theme="2g"] .field, :root[data-theme="2g"] .select select, :root[data-theme="2g"] .round-btn, :root[data-theme="2g"] .profiles__search { color: var(--text); }
