@@ -166,7 +166,10 @@ O ícone de ajustes no topo da home abre **Skin settings**:
   brilho de antes. A skin já mantém a tela acesa (wake-lock) o tempo todo.
 - **Troca:** a cada 5 min por padrão, de 1 a 60 min, sem transição; o sleep seguinte
   continua da próxima imagem.
-- **Toque:** curto mostra *Hold to wake* por 2 s; longo (1 s) acorda a máquina.
+- **Toque:** curto mostra *Hold to wake* por 2 s; longo (1 s) acorda a máquina. A imagem
+  não recebe toques e o menu de contexto é bloqueado: no Android, segurar sobre uma imagem
+  abre o menu dela e cancela o toque. Sem proteção de tela, o véu de sleep acorda com toque
+  curto ou longo.
   *Preview* mostra a proteção sem dormir a máquina (toque longo fecha).
 
 ## Temas de cor

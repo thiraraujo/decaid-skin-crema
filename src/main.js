@@ -12,6 +12,7 @@ import { initLive } from './live.js';
 import { createReadinessTracker } from './readiness.js';
 import { loadThemeFromHost } from './theme.js';
 import { loadPrefs } from './prefs.js';
+import { findSettingsPlugin } from './host.js';
 import { normalizeSaver } from './saver.js';
 import {
   initUI, renderAll, renderMachine, renderCarousel, renderLastShot, renderChart,
@@ -136,6 +137,8 @@ async function boot() {
   const useBridge = forceMock ? false : await detectHost();
   const source = useBridge ? createApiSource() : createMockSource();
   setState({ hostConnected: useBridge });
+  // descobre já o plugin de settings do app: o toque em SETTINGS não espera o /plugins
+  if (useBridge) findSettingsPlugin();
   // leitura do que é da skin mas mora no app (tema, favoritos, eixo Static, teclado);
   // começa já, em paralelo com a leitura da máquina, e entra no portão abaixo
   const themeRead = loadThemeFromHost();
@@ -269,10 +272,17 @@ async function boot() {
   })();
   // rede com problema não pode deixar a tela travada para sempre
   const BOOT_TIMEOUT_MS = 12000;
-  await Promise.race([machineRead, new Promise((r) => setTimeout(r, BOOT_TIMEOUT_MS))])
+  // Entrada suave: a tela aparece (fade) quando a leitura termina, ou em 2,5 s com o
+  // "carregando" esmaecido se a máquina demorar; as fontes entram antes do primeiro quadro.
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const fontsReady = document.fonts && document.fonts.ready ? Promise.race([document.fonts.ready, wait(1500)]) : Promise.resolve();
+  const reveal = () => { fitApp(); document.documentElement.classList.remove('is-loading'); };
+  Promise.race([wait(2500).then(() => fontsReady)]).then(reveal);
+  await Promise.race([Promise.all([machineRead, fontsReady]), wait(BOOT_TIMEOUT_MS)])
     .catch((e) => console.warn('[CREMA] leitura inicial falhou', e));
   renderAll();
   document.querySelector('.app').classList.remove('is-booting');
+  requestAnimationFrame(reveal);
 }
 
 function applyPrefs(prefs) {
