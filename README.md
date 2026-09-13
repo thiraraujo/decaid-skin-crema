@@ -200,7 +200,7 @@ na segunda. Ler as duas antes de supor qualquer coisa.
   (`currentLevel` + `refillLevel`), não por REST. A conversão mm→ml usa a tabela da
   skin de referência Bestpresso (`src/api/decaid/adapters.ts · MM_TO_ML`), a mesma do
   de1app (`vars.tcl · water_tank_level_to_milliliters`, do CAD do tanque). A skin mostra
-  `ml` e `%` sobre **2000 ml = tanque cheio** (`TANK_FULL_ML`, definido pelo usuário);
+  `ml` e `%` na escala da própria tabela, **0 a 2058 ml** (`TANK_FULL_ML`);
   âmbar abaixo de 20 %, vermelho abaixo de 10 %; aviso de recarga quando a máquina está
   em `needsWater` ou `currentLevel <= refillLevel`.
 - **Balança.** `ws/v1/scale/snapshot` emite **dois** tipos de frame no mesmo socket:
