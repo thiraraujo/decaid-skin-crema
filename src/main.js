@@ -88,6 +88,19 @@ if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', fitApp);
   window.visualViewport.addEventListener('scroll', fitApp);
 }
+// Rede de segurança contra rolagem da página: se a WebView rolar mesmo assim (gesto,
+// foco de campo, âncora), volta para a origem na hora — a skin nunca sai do lugar.
+function pinScroll() {
+  const se = document.scrollingElement || document.documentElement;
+  if (window.scrollX || window.scrollY || se.scrollLeft || se.scrollTop || document.body.scrollLeft || document.body.scrollTop) {
+    window.scrollTo(0, 0);
+    se.scrollLeft = 0; se.scrollTop = 0;
+    document.body.scrollLeft = 0; document.body.scrollTop = 0;
+  }
+}
+window.addEventListener('scroll', pinScroll, { passive: true });
+document.body.addEventListener('scroll', pinScroll, { passive: true });
+
 // a WebView às vezes só estabiliza o tamanho depois do primeiro paint
 window.addEventListener('load', fitApp);
 requestAnimationFrame(fitApp);
