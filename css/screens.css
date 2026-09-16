@@ -209,6 +209,8 @@
   display: flex; flex-direction: column; overflow: hidden;
 }
 .history__sidehead { display: flex; align-items: center; justify-content: space-between; padding: 18px 18px 12px; gap: 10px; }
+.history__sidehead .row { gap: 14px; align-items: center; }
+.history__sidehead .chip { margin-left: 4px; position: relative; top: 1px; }
 .history__title { font: 600 24px var(--sans); }
 .history__search {
   width: 40px; height: 40px; border-radius: 50%; flex: none;
@@ -236,7 +238,10 @@
 .history__item-coffee { font: 600 19px var(--sans); }
 .history__item-brand { font: 500 15px var(--sans); color: var(--blue); margin-left: 8px; }
 .history__item-l2 { font: 500 14px var(--sans); color: var(--text-2); margin-top: 3px; }
-.history__item-l3 { font-size: 12px; color: var(--label); margin-top: 4px; font-weight: 400; }
+.history__item-l3 {
+  font-size: 12px; color: var(--label); margin-top: 4px; font-weight: 400;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;   /* uma linha só */
+}
 
 .history__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
 .history__head { flex: none; gap: 24px; align-items: flex-start; }
@@ -257,9 +262,16 @@
 .history__field { display: flex; flex-direction: column; gap: 6px; }
 .history__field-v { font: 600 28px var(--sans); line-height: 1; }
 .history__field-brand { color: var(--blue); font-weight: 500; }
+/* planejado com as cores da home: dose clara, drink âmbar */
+.history__plan-dose { color: var(--text); }
+.history__plan-arrow { color: var(--muted); }
+.history__plan-drink { color: var(--amber); }
+.history__field-v .u { font-size: 14px; color: var(--label); }
 
 .history__chart { flex: 1; min-height: 0; padding: 18px 24px; display: flex; flex-direction: column; }
-.history__chart-head { flex: none; gap: 20px; }
+/* fases e legenda em linhas separadas: com muitos steps uma passava por cima da outra */
+.history__chart-head { flex: none; display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+.history__chart-head .legend { align-self: flex-end; }
 /* perfis com muitos steps não podem empurrar a legenda para fora do card */
 .history__phases {
   display: flex; gap: 12px; flex: 1; min-width: 0;
@@ -320,6 +332,14 @@
 .field__caret { color: var(--label); margin-left: auto; }
 .editshot__grind { font-size: 44px; line-height: 1.1; }
 .editshot__note { font-size: 13px; color: var(--label); font-weight: 400; margin-top: 16px; line-height: 1.5; }
+
+/* escolher café/moedor dentro do Edit — só a lista do que já está cadastrado */
+.chooser {
+  width: 620px; max-height: 620px;
+  left: 50%; top: 50%; transform: translate(-50%, -50%);
+  z-index: 63; padding: 26px 30px 24px; background: var(--bg);
+}
+.chooser__list { flex: 1; min-height: 0; overflow-y: auto; margin-top: 18px; padding-right: 10px; }
 
 /* indicador de rolagem fino (handoff: 4px à direita das listas) */
 .picker__scroll, .history__list, .coffeehist__list { scrollbar-width: thin; scrollbar-color: rgba(var(--line-rgb), var(--a18)) transparent; }

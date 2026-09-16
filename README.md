@@ -58,7 +58,7 @@ volta ao lugar; arremesso rápido troca mesmo sem passar da metade.
 
 O bloco do Grind inteiro (número + régua) é área de arrasto: 0,05 por tique, toque no
 número abre o teclado e − / + seguem ao lado. Sem valor lido da máquina o arrasto não
-faz nada (antes virava `NaN`).
+faz nada (antes virava `NaN`). A régua fica embaixo do número, entre o − e o +.
 
 A tela 02 mostra um bloco por fase do perfil conforme o shot avança (Yield / Temp /
 Pressure / Flow por fase). As fases vêm dos steps do perfil; a fase corrente, de
@@ -95,11 +95,18 @@ reacende o estado quando o `/devices` já diz que a máquina caiu.
   gravadas nas `measurements` (shot antigo sem esse campo usa os tempos do perfil).
 - **Eixo da direita (peso):** escala 0–100 g, sem números.
 
+No **Edit** do histórico, tocar em Coffee ou Grinder abre a lista do que já está
+cadastrado no Decaid (a mesma da tela inicial) — antes cada toque pulava para o próximo
+item, o que parecia não funcionar. Cadastrar café ou moedor novo continua em
+Coffee & Grinder.
+
 No histórico, cada shot guarda o **planejado** (`workflow.context.targetDoseWeight` →
 `targetYield`, o que a receita pedia) e o **realizado** (`annotations.actualDoseWeight` /
 `actualYield`; sem anotação, o último peso da balança nas measurements — critério da
-Bestpresso). A lista mostra `18→40g · real 38.4g` e a ficha tem as duas linhas
-(*Dose → Drink* e *Actual*). **Apply** copia café, moedor, moagem e o **planejado** para a
+Bestpresso). A lista da esquerda mostra o realizado numa linha só (`18→38.4g`; sem medida, o
+planejado); na ficha, *Actual* fica no topo com Duration/Ratio/Brew e o planejado
+*Dose → Drink* desce para a faixa de baixo, ao lado do café, com as cores da home
+(dose clara, drink âmbar). **Apply** copia café, moedor, moagem e o **planejado** para a
 tela principal (e para o workflow da máquina); **Edit** corrige os dados daquele shot.
 Ao filtrar por café, o primeiro shot da lista filtrada passa a ser o selecionado — o
 gráfico e a ficha acompanham.

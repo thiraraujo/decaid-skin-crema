@@ -143,13 +143,13 @@ function paint() {
   paintDetail(selected());
 }
 
+// Uma linha só (sem quebra) com o REALIZADO; sem medida gravada, cai no planejado.
 function itemMeta(s) {
-  const plan = (planDoseOf(s) != null && planYieldOf(s) != null)
-    ? `${fmtInt(planDoseOf(s))}→${fmtInt(planYieldOf(s))}g` : null;
-  const real = realYieldOf(s);
-  const realTxt = (real != null && planYieldOf(s) != null && Math.abs(real - planYieldOf(s)) >= 0.5)
-    ? `real ${fmt(real, 1)}g` : null;
-  return [s.when, s.duration != null ? `${Math.round(s.duration)}s` : null, plan, realTxt, ratioOf(s)]
+  const y = realYieldOf(s), d = realDoseOf(s) ?? planDoseOf(s);
+  const weights = y != null
+    ? `${fmtInt(d)}→${fmt(y, 1)}g`
+    : (planDoseOf(s) != null && planYieldOf(s) != null ? `${fmtInt(planDoseOf(s))}→${fmtInt(planYieldOf(s))}g` : null);
+  return [s.when, s.duration != null ? `${Math.round(s.duration)}s` : null, weights, ratioOf(s)]
     .filter(Boolean).join(' · ');
 }
 
@@ -169,14 +169,19 @@ function paintDetail(s) {
 
   stats.innerHTML = [
     ['Duration', s.duration != null ? `${Math.round(s.duration)}s` : '—'],
-    ['Dose → Drink', planText(s)],
     ['Actual', actualText(s)],
     ['Ratio', ratioOf(s)],
     ['Brew', s.brewTemp != null ? `${fmtInt(s.brewTemp)}°` : '—'],
   ].map(([k, v]) => `<div class="history__stat"><span class="lb">${k}</span><span class="mono history__stat-v">${esc(v)}</span></div>`).join('<span class="history__sep"></span>');
 
+  // planejado ao lado do café, com as mesmas cores da home (dose clara, drink âmbar)
+  const pd = planDoseOf(s), py = planYieldOf(s);
+  const planCell = pd != null && py != null
+    ? `<span class="mono history__field-v"><span class="history__plan-dose">${fmtInt(pd)}</span><span class="history__plan-arrow"> → </span><span class="history__plan-drink">${fmtInt(py)}</span><span class="u">g</span></span>`
+    : '<span class="mono history__field-v">—</span>';
   strip.innerHTML = `
     <div class="history__field"><span class="lb">Coffee</span><span class="history__field-v">${esc(s.coffee || '—')}${s.brand ? ` <span class="history__field-brand">${esc(s.brand)}</span>` : ''}</span></div>
+    <div class="history__field"><span class="lb">Dose → Drink</span>${planCell}</div>
     <div class="history__field"><span class="lb">Grinder</span><span class="history__field-v">${esc(s.grinder || '—')}</span></div>
     <div class="history__field"><span class="lb">Grind</span><span class="mono history__field-v">${fmt(s.grind, 2)}</span></div>`;
 
@@ -390,21 +395,67 @@ function buildEdit() {
   editEl.querySelector('#ed-grind').addEventListener('click', () => {
     openNumpad('grind', editDraft.grind, (v) => { editDraft.grind = v; paintEdit(); });
   });
-  editEl.querySelector('#ed-coffee').addEventListener('click', () => cycle('coffee'));
-  editEl.querySelector('#ed-grinder').addEventListener('click', () => cycle('grinder'));
+  editEl.querySelector('#ed-coffee').addEventListener('click', () => openChooser('coffee'));
+  editEl.querySelector('#ed-grinder').addEventListener('click', () => openChooser('grinder'));
 }
 
-// sem teclado físico no kiosk: o select percorre a biblioteca já cadastrada
-function cycle(kind) {
-  const list = kind === 'coffee' ? state.beans : state.grinders;
-  if (!list.length) return;
-  const cur = kind === 'coffee' ? editDraft.coffee : editDraft.grinder;
-  const i = list.findIndex((x) => x.name === cur);
-  const next = list[(i + 1) % list.length];
-  if (kind === 'coffee') { editDraft.coffee = next.name; editDraft.brand = next.brand || ''; editDraft.coffeeId = next.id; }
-  else { editDraft.grinder = next.name; editDraft.grinderId = next.id; }
-  paintEdit();
+// ---------- escolher café / moedor entre os JÁ CADASTRADOS ----------
+// Mesma lista que a tela inicial mostra (state.beans / state.grinders, lidos do Decaid):
+// aqui é só escolher — cadastrar café ou moedor novo continua na tela Coffee & Grinder.
+let chooserEl = null;
+let chooserKind = 'coffee';
+
+function buildChooser() {
+  chooserEl = document.createElement('div');
+  chooserEl.className = 'modal chooser';
+  chooserEl.hidden = true;
+  chooserEl.innerHTML = `
+    <div class="modal__head">
+      <div class="modal__title" id="ch2-title">Coffee</div>
+      <button class="modal__close tap" id="ch2-close" type="button">×</button>
+    </div>
+    <div class="picker__list chooser__list" id="ch2-list"></div>`;
+  app().appendChild(chooserEl);
+  chooserEl.querySelector('#ch2-close').addEventListener('click', hideChooser);
+  chooserEl.querySelector('#ch2-list').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-id]');
+    if (!b) return;
+    const items = chooserKind === 'coffee' ? state.beans : state.grinders;
+    const it = items.find((x) => String(x.id) === b.dataset.id);
+    if (!it) return;
+    if (chooserKind === 'coffee') {
+      editDraft.coffee = it.name; editDraft.brand = it.brand || ''; editDraft.coffeeId = it.id;
+    } else {
+      editDraft.grinder = it.name; editDraft.grinderId = it.id;
+    }
+    paintEdit();
+    hideChooser();
+  });
 }
+
+function openChooser(kind) {
+  if (!chooserEl) buildChooser();
+  chooserKind = kind;
+  const isCoffee = kind === 'coffee';
+  const items = isCoffee ? state.beans : state.grinders;
+  const curId = isCoffee ? editDraft.coffeeId : editDraft.grinderId;
+  const curName = isCoffee ? editDraft.coffee : editDraft.grinder;
+  chooserEl.querySelector('#ch2-title').textContent = isCoffee ? 'Coffee' : 'Grinder';
+  chooserEl.querySelector('#ch2-list').innerHTML = items.length
+    ? items.map((it) => {
+      const on = (it.id != null && it.id === curId) || it.name === curName;
+      return isCoffee
+        ? `<button class="picker__item row${on ? ' is-on' : ''}" data-id="${esc(it.id)}" type="button">
+             <span><span class="picker__name">${esc(it.name)}</span><span class="picker__brand">${esc(it.brand || '')}</span></span>
+             ${it.process ? `<span class="chip chip--sm">${esc(it.process)}</span>` : ''}
+           </button>`
+        : `<button class="picker__item picker__item--one${on ? ' is-on' : ''}" data-id="${esc(it.id)}" type="button">${esc(it.name)}</button>`;
+    }).join('')
+    : `<div class="coffeehist__empty">Nothing registered yet — add it in Coffee &amp; Grinder.</div>`;
+  chooserEl.hidden = false;
+}
+
+function hideChooser() { if (chooserEl) chooserEl.hidden = true; }
 
 function paintEdit() {
   editEl.querySelector('#ed-coffee').innerHTML = `${esc(editDraft.coffee || '—')}${editDraft.brand ? ` <span class="field__brand">${esc(editDraft.brand)}</span>` : ''}<span class="field__caret">⌄</span>`;

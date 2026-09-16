@@ -180,7 +180,9 @@ html.is-loading .app { opacity: 0; transition: none; }
 /* arrastar o dedo em qualquer ponto daqui (inclusive sobre o número) muda a moagem */
 .rail__grind-zone { width: 100%; touch-action: none; padding-bottom: 6px; }
 .rail__grind-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 2px; }
-.rail__grind { display: block; flex: 1; min-width: 0; font-size: 36px; line-height: 1.1; }
+/* número e régua na mesma coluna, entre o − e o + */
+.rail__grind-mid { flex: 1; min-width: 0; }
+.rail__grind { display: block; width: 100%; font-size: 36px; line-height: 1.1; }
 .rail__grind-row .stepper[disabled] { opacity: .3; }
 
 .rail__ratio {
