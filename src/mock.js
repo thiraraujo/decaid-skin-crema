@@ -144,6 +144,7 @@ const HISTORY = (() => {
       profile: r.p, coffee: bean.name, brand: bean.roaster, coffeeId: bean.id,
       grinder: gr.model, grinderId: gr.id, grind: r.grind,
       dose: r.dose, yield: r.y, duration: r.dur, brewTemp: r.brew,
+      stopReason: ['targetWeight', 'targetWeight', 'appStop', 'targetVolume'][i % 4],
     };
   });
 })();

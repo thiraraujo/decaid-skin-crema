@@ -245,29 +245,75 @@
 }
 
 .history__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
-.history__head { flex: none; gap: 24px; align-items: flex-start; }
-.history__profile { font: 600 28px var(--sans); }
-.history__date { font-size: 14px; color: var(--label); margin-top: 4px; font-weight: 400; }
-.history__stats { display: flex; align-items: center; gap: 18px; margin-left: auto; }
-.history__stat { display: flex; flex-direction: column; gap: 6px; }
-.history__stat-v { font-size: 28px; line-height: 1; }
-.history__sep { width: 1px; height: 44px; background: var(--divider); }
 
-.history__strip {
-  flex: none; padding: 14px 18px;
+/* ---- ficha do shot (identidade · números · ações) ----
+   Zonas de largura fixa: o texto da esquerda encolhe em degraus (src/history.js,
+   fitLine) e nunca quebra linha, então a ficha tem sempre a mesma altura. */
+.hsheet {
+  flex: none; display: flex; align-items: stretch; gap: 18px;
+  padding: 12px 18px;
   border: 1px solid var(--border-soft); border-radius: var(--r-card);
-  gap: 20px;
 }
-.history__strip-fields { display: flex; gap: 36px; align-items: center; flex-wrap: wrap; }
-.history__strip-actions { display: flex; gap: 10px; align-items: center; flex: none; }
-.history__field { display: flex; flex-direction: column; gap: 6px; }
-.history__field-v { font: 600 28px var(--sans); line-height: 1; }
-.history__field-brand { color: var(--blue); font-weight: 500; }
-/* planejado com as cores da home: dose clara, drink âmbar */
-.history__plan-dose { color: var(--text); }
-.history__plan-arrow { color: var(--muted); }
-.history__plan-drink { color: var(--amber); }
-.history__field-v .u { font-size: 14px; color: var(--label); }
+.hsheet__ident {
+  width: 296px; flex: none; min-width: 0;
+  display: flex; flex-direction: column; justify-content: center; gap: 9px;
+}
+.hsheet__row {
+  display: grid; grid-template-columns: 60px 1fr; gap: 10px;
+  align-items: baseline; min-width: 0;
+}
+.hsheet__row .lb { padding-top: 2px; }
+.hsheet__v {
+  font: 600 19px/1.2 var(--sans);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hsheet__grind { color: var(--amber); font-weight: 400; }
+/* o café ocupa SEMPRE duas linhas: nome em cima, torrefação embaixo */
+.hsheet__coffee { display: flex; flex-direction: column; min-width: 0; }
+.hsheet__name {
+  font: 600 18px/1.28 var(--sans);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hsheet__roaster {
+  font: 500 15px/1.28 var(--sans); color: var(--blue);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hsheet__roaster.is-empty { color: var(--muted); opacity: .45; }
+
+.hsheet__sep { width: 1px; align-self: stretch; background: var(--divider); flex: none; }
+
+.hsheet__mid {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; justify-content: center; gap: 12px;
+}
+.hsheet__stamps { display: flex; flex-direction: column; gap: 3px; }
+.hsheet__stamp {
+  font: 400 11px/1.35 var(--mono); letter-spacing: .09em; text-transform: uppercase;
+  color: var(--muted); text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hsheet__grid { display: grid; grid-template-columns: 1.45fr 1fr; gap: 8px 20px; }
+.hsheet__cell {
+  display: grid; grid-template-columns: 44px 1fr; gap: 9px;
+  align-items: baseline; min-width: 0;
+}
+.hsheet__val {
+  font: 400 19px/1.2 var(--mono);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hsheet__val .u { font-size: 11px; color: var(--label); }
+.hsheet__val--brew { color: var(--red); }
+/* alvo em cinza, real em âmbar — as mesmas cores da home */
+.hsheet__target { color: var(--muted); }
+.hsheet__arrow { color: var(--muted); }
+.hsheet__real { color: var(--amber); }
+.hsheet__ratio { margin-left: 8px; font-size: 13px; color: var(--blue); opacity: .8; }
+
+.hsheet__acts {
+  width: 108px; flex: none;
+  display: flex; flex-direction: column; justify-content: center; gap: 8px;
+}
+.hsheet__btn { height: 38px; padding: 0 14px; justify-content: center; font-size: 14px; }
 
 .history__chart { flex: 1; min-height: 0; padding: 18px 24px; display: flex; flex-direction: column; }
 /* fases e legenda em linhas separadas: com muitos steps uma passava por cima da outra */

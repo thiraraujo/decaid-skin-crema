@@ -307,6 +307,7 @@ export function createApiSource() {
               ts: fmtTs(s.timestamp),
               rawTs: s.timestamp,
               profile: (wf.profile && wf.profile.title) || 'Shot',
+              stopReason: s.stopReason || null,
               coffee: ex.coffeeName || ctx.coffeeName || '',
               brand: ex.coffeeRoaster || ctx.coffeeRoaster || '',
               grinder: ex.grinderModel || ctx.grinderModel || '',

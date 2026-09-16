@@ -57,19 +57,37 @@ function build() {
       <div class="history__list" id="hs-list"></div>
     </aside>
     <section class="history__main">
-      <div class="row history__head">
-        <div class="history__headline">
-          <div class="history__profile" id="hd-profile">—</div>
-          <div class="mono history__date" id="hd-date">—</div>
+      <div class="hsheet">
+        <div class="hsheet__ident">
+          <div class="hsheet__row">
+            <span class="lb">Profile</span>
+            <span class="hsheet__v" id="hd-profile">—</span>
+          </div>
+          <div class="hsheet__row">
+            <span class="lb">Coffee</span>
+            <span class="hsheet__coffee">
+              <span class="hsheet__name" id="hd-coffee">—</span>
+              <span class="hsheet__roaster" id="hd-roaster"></span>
+            </span>
+          </div>
+          <div class="hsheet__row">
+            <span class="lb">Grinder</span>
+            <span class="hsheet__v" id="hd-grinder">—</span>
+          </div>
         </div>
-        <div class="history__stats" id="hd-stats"></div>
-        <button class="btn-ghost tap" id="hs-close" type="button">Close</button>
-      </div>
-      <div class="row history__strip">
-        <div class="history__strip-fields" id="hd-strip"></div>
-        <div class="history__strip-actions">
-          <button class="pill pill--blue tap" id="hs-apply" type="button">Apply</button>
-          <button class="pill pill--blue tap" id="hs-edit" type="button">
+        <span class="hsheet__sep"></span>
+        <div class="hsheet__mid">
+          <div class="hsheet__stamps">
+            <div class="mono hsheet__stamp" id="hd-date">—</div>
+            <div class="mono hsheet__stamp" id="hd-stop"></div>
+          </div>
+          <div class="hsheet__grid" id="hd-grid"></div>
+        </div>
+        <span class="hsheet__sep"></span>
+        <div class="hsheet__acts">
+          <button class="pill tap hsheet__btn" id="hs-close" type="button">Close</button>
+          <button class="pill pill--blue tap hsheet__btn" id="hs-apply" type="button">Apply</button>
+          <button class="pill pill--blue tap hsheet__btn" id="hs-edit" type="button">
             <svg class="ic" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-pencil"/></svg>
             Edit
           </button>
@@ -154,37 +172,85 @@ function itemMeta(s) {
     .filter(Boolean).join(' · ');
 }
 
+// Como o shot terminou (ShotRecord.stopReason, conjunto ABERTO — a doc manda
+// tolerar valores novos, então o que não estiver no mapa vira texto legível).
+const STOP_LABELS = {
+  targetWeight: 'Target weight',
+  targetVolume: 'Target volume',
+  apiStop: 'Manual',
+  appStop: 'Manual',
+  machineEnded: 'Machine',
+  profileAdvance: 'Profile end',
+  profileSkip: 'Skipped',
+  noScale: 'No scale',
+  error: 'Error',
+  disconnected: 'Disconnected',
+};
+function stopText(s) {
+  const r = s && s.stopReason;
+  if (!r) return '';
+  const label = STOP_LABELS[r] || r.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
+  return `Stopped by ${label}`;
+}
+
+// A coluna da esquerda é de largura fixa: o texto nunca quebra linha — encolhe em
+// degraus e, no limite, corta com reticências.
+function fitLine(el, sizes) {
+  if (!el) return;
+  for (const px of sizes) {
+    el.style.fontSize = `${px}px`;
+    if (el.scrollWidth <= el.clientWidth + 1) break;
+  }
+}
+
 function paintDetail(s) {
-  const stats = screenEl.querySelector('#hd-stats');
-  const strip = screenEl.querySelector('#hd-strip');
+  const grid = screenEl.querySelector('#hd-grid');
+  const set = (id, txt) => { screenEl.querySelector(id).textContent = txt; };
   if (!s) {
-    screenEl.querySelector('#hd-profile').textContent = '—';
-    screenEl.querySelector('#hd-date').textContent = '';
-    stats.innerHTML = ''; strip.innerHTML = '';
+    set('#hd-profile', '—'); set('#hd-coffee', '—'); set('#hd-roaster', '');
+    set('#hd-grinder', '—'); set('#hd-date', '—'); set('#hd-stop', '');
+    grid.innerHTML = '';
     screenEl.querySelector('#hd-phases').innerHTML = '';
     chart.showShot(null);
     return;
   }
-  screenEl.querySelector('#hd-profile').textContent = s.profile || 'Shot';
-  screenEl.querySelector('#hd-date').textContent = s.when || '';
 
-  stats.innerHTML = [
-    ['Duration', s.duration != null ? `${Math.round(s.duration)}s` : '—'],
-    ['Actual', actualText(s)],
-    ['Ratio', ratioOf(s)],
-    ['Brew', s.brewTemp != null ? `${fmtInt(s.brewTemp)}°` : '—'],
-  ].map(([k, v]) => `<div class="history__stat"><span class="lb">${k}</span><span class="mono history__stat-v">${esc(v)}</span></div>`).join('<span class="history__sep"></span>');
+  set('#hd-profile', s.profile || 'Shot');
+  set('#hd-coffee', s.coffee || 'No coffee');
+  // segunda linha sempre existe: sem torrefação registrada fica um traço discreto
+  const roaster = screenEl.querySelector('#hd-roaster');
+  roaster.textContent = s.brand || '—';
+  roaster.classList.toggle('is-empty', !s.brand);
+  screenEl.querySelector('#hd-grinder').innerHTML = s.grinder
+    ? `${esc(s.grinder)} <span class="mono hsheet__grind">${fmt(s.grind, 2)}</span>`
+    : '—';
+  set('#hd-date', s.when || '—');
+  set('#hd-stop', stopText(s));
 
-  // planejado ao lado do café, com as mesmas cores da home (dose clara, drink âmbar)
-  const pd = planDoseOf(s), py = planYieldOf(s);
-  const planCell = pd != null && py != null
-    ? `<span class="mono history__field-v"><span class="history__plan-dose">${fmtInt(pd)}</span><span class="history__plan-arrow"> → </span><span class="history__plan-drink">${fmtInt(py)}</span><span class="u">g</span></span>`
-    : '<span class="mono history__field-v">—</span>';
-  strip.innerHTML = `
-    <div class="history__field"><span class="lb">Coffee</span><span class="history__field-v">${esc(s.coffee || '—')}${s.brand ? ` <span class="history__field-brand">${esc(s.brand)}</span>` : ''}</span></div>
-    <div class="history__field"><span class="lb">Dose → Drink</span>${planCell}</div>
-    <div class="history__field"><span class="lb">Grinder</span><span class="history__field-v">${esc(s.grinder || '—')}</span></div>
-    <div class="history__field"><span class="lb">Grind</span><span class="mono history__field-v">${fmt(s.grind, 2)}</span></div>`;
+  const pd = planDoseOf(s), py = planYieldOf(s), ry = realYieldOf(s);
+  // a dose não muda entre planejado e realizado; quem muda é o drink (alvo → real)
+  const doseCell = pd != null ? `${fmtInt(pd)}<span class="u">g</span>` : '—';
+  // sem peso medido não há "alvo → real": mostra só o alvo, sem a seta repetindo o mesmo número
+  const drinkCell = (() => {
+    if (py == null && ry == null) return '—';
+    const head = py != null && ry != null
+      ? `<span class="hsheet__target">${fmtInt(py)}</span><span class="hsheet__arrow">→</span>` : '';
+    const main = ry != null ? fmt(ry, 1) : fmtInt(py);
+    return `${head}<span class="hsheet__real">${main}</span><span class="u">g</span>`
+      + `<span class="hsheet__ratio">${esc(ratioOf(s))}</span>`;
+  })();
+  grid.innerHTML = [
+    ['Dose', `<span class="mono hsheet__val">${doseCell}</span>`],
+    ['Brew', `<span class="mono hsheet__val hsheet__val--brew">${s.brewTemp != null ? `${fmtInt(s.brewTemp)}<span class="u">°</span>` : '—'}</span>`],
+    ['Drink', `<span class="mono hsheet__val">${drinkCell}</span>`],
+    ['Time', `<span class="mono hsheet__val">${s.duration != null ? `${Math.round(s.duration)}<span class="u">s</span>` : '—'}</span>`],
+  ].map(([k, v]) => `<div class="hsheet__cell"><span class="lb">${k}</span>${v}</div>`).join('');
+
+  // degraus até um tamanho ainda legível; abaixo disso vale mais cortar com reticências
+  fitLine(screenEl.querySelector('#hd-profile'), [19, 17, 15]);
+  fitLine(screenEl.querySelector('#hd-coffee'), [18, 16, 14]);
+  fitLine(roaster, [15, 13, 12]);
+  fitLine(screenEl.querySelector('#hd-grinder'), [18, 16, 14]);
 
   const phases = (s.series && s.series.phases) || [];
   screenEl.querySelector('#hd-phases').innerHTML = phases
