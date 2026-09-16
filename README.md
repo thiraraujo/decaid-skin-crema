@@ -56,9 +56,29 @@ O carrossel de favoritos é contínuo: os cards acompanham o dedo durante o arra
 então o perfil troca na máquina. Toque num card lateral desliza até ele; arrasto curto
 volta ao lugar; arremesso rápido troca mesmo sem passar da metade.
 
+O bloco do Grind inteiro (número + régua) é área de arrasto: 0,05 por tique, toque no
+número abre o teclado e − / + seguem ao lado. Sem valor lido da máquina o arrasto não
+faz nada (antes virava `NaN`).
+
 A tela 02 mostra um bloco por fase do perfil conforme o shot avança (Yield / Temp /
 Pressure / Flow por fase). As fases vêm dos steps do perfil; a fase corrente, de
-`profileFrame` no snapshot — sem esse campo, dos tempos planejados.
+`profileFrame` no snapshot — sem esse campo, dos tempos planejados. Cada bloco nasce no
+instante em que a fase começa; não há vaga da "próxima", porque a DE1 pula steps por
+condição de saída (o step 2 de um perfil pode simplesmente não acontecer) e a vaga
+anunciava um número que não vinha. Valores longos ("7.4 → 8.8 → 0") encolhem a fonte
+para caber sem mudar o tamanho do bloco.
+
+**Fim do shot (sem ruído).** A curva ao vivo só aceita amostras com substate
+`preinfusion` ou `pouring` (websocket_v1.yml · MachineSubstate) depois que o despejo
+começa; o rabo de `pouringDone` — a pressão e o fluxo caindo depois que a máquina parou —
+fica de fora, como no shot gravado. Mesmo critério da Bestpresso
+(`ESPRESSO_EXTRACTION_SUBSTATES`).
+
+**Máquina desligada.** Além do `ws/v1/devices`, a skin vigia o silêncio do
+`ws/v1/machine/snapshot`: o canal "remains open and silent while no machine is attached",
+então 10 s sem frame viram DISCONNECTED em vez de congelar o último estado (era assim que
+a pílula ficava em HEATING com a máquina desligada no botão). Um frame atrasado também não
+reacende o estado quando o `/devices` já diz que a máquina caiu.
 
 ## Gráfico do shot
 
@@ -75,8 +95,14 @@ Pressure / Flow por fase). As fases vêm dos steps do perfil; a fase corrente, d
   gravadas nas `measurements` (shot antigo sem esse campo usa os tempos do perfil).
 - **Eixo da direita (peso):** escala 0–100 g, sem números.
 
-No histórico, **Apply** copia café, moedor, moagem, dose e drink do shot para a tela
-principal (e para o workflow da máquina); **Edit** corrige os dados daquele shot.
+No histórico, cada shot guarda o **planejado** (`workflow.context.targetDoseWeight` →
+`targetYield`, o que a receita pedia) e o **realizado** (`annotations.actualDoseWeight` /
+`actualYield`; sem anotação, o último peso da balança nas measurements — critério da
+Bestpresso). A lista mostra `18→40g · real 38.4g` e a ficha tem as duas linhas
+(*Dose → Drink* e *Actual*). **Apply** copia café, moedor, moagem e o **planejado** para a
+tela principal (e para o workflow da máquina); **Edit** corrige os dados daquele shot.
+Ao filtrar por café, o primeiro shot da lista filtrada passa a ser o selecionado — o
+gráfico e a ficha acompanham.
 
 ## Estrutura
 

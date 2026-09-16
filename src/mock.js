@@ -198,13 +198,23 @@ export function createMockSource() {
   function tick() {
     t += TICK_MS / 1000;
     for (const cb of snapshotCbs) {
-      cb({ t, running: true, state: 'espresso', frame: simFrame(t), pressure: sample(P, t), flow: sample(F, t), mixTemp: 92.4, groupTemp: 94.1, temp: sample(T, t), ...simTargets(t) });
+      // substates como os da máquina (websocket_v1.yml · MachineSubstate): a cauda
+      // depois de `pouringDone` é o ruído que a skin deve descartar
+      const substate = t < 1.5 ? 'preparingForShot' : t < 14 ? 'preinfusion' : t <= T_MAX ? 'pouring' : 'pouringDone';
+      const noise = t > T_MAX ? (Math.random() - 0.5) * 6 : 0;
+      cb({
+        t, running: true, state: 'espresso', substate, frame: simFrame(Math.min(t, T_MAX)),
+        pressure: Math.max(0, sample(P, Math.min(t, T_MAX)) + noise),
+        flow: Math.max(0, sample(F, Math.min(t, T_MAX)) + noise),
+        mixTemp: 92.4, groupTemp: 94.1, temp: sample(T, Math.min(t, T_MAX)), ...simTargets(Math.min(t, T_MAX)),
+      });
     }
     if (scaleConnected) {
       const weight = Math.max(0, sample(W, t) - tareOffset);
       for (const cb of scaleCbs) cb({ kind: 'weight', connected: true, weight, weightFlow: null, battery: 78 });
     }
-    if (t >= T_MAX) { stopShot(); for (const cb of endCbs) cb(); }
+    // 3 s de "pouringDone" com ruído antes de encerrar, como na máquina real
+    if (t >= T_MAX + 3) { stopShot(); for (const cb of endCbs) cb(); }
   }
 
   function startShot() {

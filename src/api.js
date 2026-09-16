@@ -264,8 +264,16 @@ export function createApiSource() {
               coffee: ex.coffeeName || ctx.coffeeName || ctx.coffee || s.coffeeName || '',
               brand: ex.coffeeRoaster || ctx.coffeeRoaster || '',
               grinder: ex.grinderModel || ctx.grinderModel || '',
-              dose: ann.actualDoseWeight ?? ctx.targetDoseWeight ?? s.dose,
-              yield: ann.actualYield ?? ctx.targetYield ?? s.yield,
+              // PLANEJADO: o que o workflow pedia quando o shot saiu (rest_v1.yml ·
+              // WorkflowContext.targetDoseWeight / targetYield). REALIZADO: o que foi
+              // medido (ShotAnnotations.actualDoseWeight / actualYield; sem anotação, o
+              // último peso da balança nas measurements — critério da Bestpresso).
+              planDose: ctx.targetDoseWeight ?? null,
+              planYield: ctx.targetYield ?? null,
+              realDose: ann.actualDoseWeight ?? null,
+              realYield: ann.actualYield ?? null,
+              dose: ctx.targetDoseWeight ?? ann.actualDoseWeight ?? s.dose,
+              yield: ctx.targetYield ?? ann.actualYield ?? s.yield,
               grind: ex.grinderSetting ?? ctx.grinderSetting ?? ctx.grindSetting ?? s.grinderSetting,
               finalWeight: ann.actualYield ?? s.finalWeight,  // gramas reais (annotations)
               notes: ann.espressoNotes || '',
@@ -303,8 +311,12 @@ export function createApiSource() {
               brand: ex.coffeeRoaster || ctx.coffeeRoaster || '',
               grinder: ex.grinderModel || ctx.grinderModel || '',
               grind: ex.grinderSetting ?? ctx.grinderSetting ?? null,
-              dose: ann.actualDoseWeight ?? ctx.targetDoseWeight ?? null,
-              yield: ann.actualYield ?? ctx.targetYield ?? null,
+              planDose: ctx.targetDoseWeight ?? null,
+              planYield: ctx.targetYield ?? null,
+              realDose: ann.actualDoseWeight ?? null,
+              realYield: ann.actualYield ?? null,
+              dose: ctx.targetDoseWeight ?? ann.actualDoseWeight ?? null,
+              yield: ctx.targetYield ?? ann.actualYield ?? null,
             };
           });
         })
@@ -453,12 +465,17 @@ function mapShotMeasurements(shot) {
     flowTarget.push([t, activeTarget(mt.targetFlow, 'flow', pump)]);
   }
   const dur = pressure.length ? pressure[pressure.length - 1][0] : 30;
+  // peso realizado: anotação do shot ou o último peso da balança (critério da Bestpresso)
+  const lastWeight = weight.length ? weight[weight.length - 1][1] : null;
+  const ann = shot.annotations || {};
   const title = (pr && pr.title) || shot.profileTitle || 'Shot';
   // o próprio shot carrega o perfil com que foi tirado → fases e temperatura de brew
   const plan = pr ? profileToPlan(pr) : null;
   const brewTemp = plan && plan.temp && plan.temp.length ? plan.temp[0][1] : null;
   return {
     kind: 'shot', profile: title, duration: dur || 30, brewTemp,
+    realYield: ann.actualYield ?? (lastWeight != null && lastWeight > 0 ? Number(lastWeight.toFixed(1)) : null),
+    realDose: ann.actualDoseWeight ?? null,
     pressure, flow, temp, weight,
     pressureTarget: hasTargets ? pressureTarget : null,
     flowTarget: hasTargets ? flowTarget : null,

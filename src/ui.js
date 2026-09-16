@@ -406,19 +406,29 @@ function setStopMode(mode) {
 }
 
 // ================= réguas (drag com snap) =================
-function bindRuler(id, field, apply) {
+/**
+ * Área de arrasto de um valor. `id` pode ser a régua ou um bloco inteiro (o do Grind
+ * inclui o número). Sem valor lido da máquina o arrasto não faz nada — era daí que
+ * saía o "NaN" na tela. Toque sem arrastar sobre o número abre o teclado.
+ * @param {{get:Function,set:Function,commit:Function}} apply
+ */
+function bindRuler(id, field, apply, opts = {}) {
   const el = $(id);
   if (!el) return;
-  let startX = 0, startVal = 0, active = false, f = FIELDS[field];
+  let startX = 0, startVal = null, active = false, moved = false, f = FIELDS[field];
 
   const PX_PER_STEP = 7;   // um tique fino = um passo
+  const TAP_PX = 8;
 
   el.addEventListener('pointerdown', (e) => {
-    active = true;
-    startX = e.clientX;
+    if (e.target.closest('.stepper')) return;      // − / + têm o próprio clique
     startVal = apply.get();
-    f = fieldFor(field, startVal);   // faixa efetiva do valor atual
-    // captura mantém o arrasto vivo se o dedo sair da régua; falha em ponteiros
+    if (!Number.isFinite(Number(startVal))) { startVal = null; }
+    active = true;
+    moved = false;
+    startX = e.clientX;
+    f = fieldFor(field, startVal ?? FIELDS[field].min);   // faixa efetiva do valor atual
+    // captura mantém o arrasto vivo se o dedo sair da área; falha em ponteiros
     // sintéticos (testes) e não deve derrubar o gesto
     try { el.setPointerCapture(e.pointerId); } catch { /* segue sem captura */ }
   });
@@ -427,14 +437,18 @@ function bindRuler(id, field, apply) {
     // o canvas é escalado por transform: converte px de tela → px de layout
     const scale = document.querySelector('.app').getBoundingClientRect().width / 1320;
     const dx = (e.clientX - startX) / (scale || 1);
+    if (!moved && Math.abs(dx) < TAP_PX) return;
+    moved = true;
+    if (startVal == null) return;                  // sem valor da máquina não há de onde partir
     const steps = Math.round(dx / PX_PER_STEP);
     const next = clampStep(startVal + steps * f.step, f);
-    if (next !== apply.get()) { apply.set(next); }
+    if (Number.isFinite(next) && next !== apply.get()) apply.set(next);
   });
   const end = (e) => {
     if (!active) return;
     active = false;
     try { el.releasePointerCapture(e.pointerId); } catch {}
+    if (!moved) { if (opts.onTap) opts.onTap(e); return; }
     apply.commit();
   };
   el.addEventListener('pointerup', end);
@@ -448,6 +462,8 @@ function grindStep() {
   const s = g && Number(g.smallStep);
   return s > 0 ? s : FIELDS.grind.step;
 }
+
+const openGrindNumpad = () => openNumpad('grind', state.recipe.grind, (v) => setRecipe({ grind: v }));
 
 function nudgeGrind(dir) {
   const cur = state.recipe.grind;
@@ -474,7 +490,9 @@ function fitCoffeeName() {
 }
 
 function clampStep(v, f) {
-  const snapped = Math.round(v / f.step) * f.step;
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  const snapped = Math.round(n / f.step) * f.step;
   return Math.min(f.max, Math.max(f.min, Number(snapped.toFixed(4))));
 }
 
@@ -488,7 +506,7 @@ export function initUI(chartInstance, dataSource, liveChart) {
   $('coffee-name-btn').addEventListener('click', () => openCoffee('coffee'));
   $('grinder-btn').addEventListener('click', () => openCoffee('grinder'));
 
-  $('grind-value').addEventListener('click', () => openNumpad('grind', state.recipe.grind, (v) => setRecipe({ grind: v })));
+  // o toque no número é tratado pelo arrasto (onTap) — aqui fica só o atalho de teclado
   $('dose-value').addEventListener('click', () => openNumpad('dose', state.recipe.dose, (v) => setRecipe({ dose: v })));
   $('drink-value').addEventListener('click', () => openNumpad('drink', state.recipe.drink, (v) => setRecipe({ drink: v })));
   $('brew-value').addEventListener('click', () => openNumpad('brew', state.recipe.brewTemp, (v) => setBrew(v)));
@@ -501,11 +519,12 @@ export function initUI(chartInstance, dataSource, liveChart) {
   $('grind-plus').addEventListener('click', () => nudgeGrind(+1));
   // a largura do nome depende da fonte carregada: reajusta quando ela chega
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitCoffeeName);
-  bindRuler('grind-ruler', 'grind', {
+  // o bloco inteiro do Grind é área de arrasto (número incluído); toque abre o teclado
+  bindRuler('grind-zone', 'grind', {
     get: () => state.recipe.grind,
     set: (v) => { state.recipe.grind = v; renderRecipe(); },
     commit: () => pushWorkflow(),
-  });
+  }, { onTap: (e) => { if (e.target.closest('#grind-value')) openGrindNumpad(); } });
   bindPresets('dose-chips', (v) => setRecipe({ dose: v }));
   bindPresets('drink-chips', (v) => setRecipe({ drink: v }));
 
