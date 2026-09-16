@@ -105,8 +105,9 @@ function layoutBrewWheel(offset = brewOffset) {
   const items = $('brew-items');
   if (!items) return;
   brewOffset = offset;
+  // os números acompanham o dedo: arrastar para a direita traz os menores para o centro
   for (const el of items.children) {
-    const p = Number(el.dataset.d) - offset;
+    const p = Number(el.dataset.d) + offset;
     const ap = Math.min(BREW_LEVELS.length - 1, Math.abs(p));
     const { size, alpha } = brewLevel(ap);
     el.style.transform = `translate(calc(-50% + ${(p * BREW_SLOT).toFixed(1)}px), -50%)`;
@@ -179,8 +180,9 @@ function bindBrewWheel() {
     if (!moved && Math.abs(dx) < 8) return;
     moved = true;
     const lim = f();
-    // não deixa arrastar além das pontas da faixa
-    const off = Math.max(lim.min - startVal, Math.min(lim.max - startVal, dx / BREW_SLOT));
+    // não deixa arrastar além das pontas da faixa (o sinal é invertido: arrastar para a
+    // direita diminui o valor, como numa lista que anda junto com o dedo)
+    const off = Math.max(startVal - lim.max, Math.min(startVal - lim.min, dx / BREW_SLOT));
     layoutBrewWheel(off);
   });
 
@@ -194,7 +196,7 @@ function bindBrewWheel() {
     }
     const lim = f();
     const target = Math.round(brewOffset);
-    const next = Math.min(lim.max, Math.max(lim.min, Math.round(startVal) + target));
+    const next = Math.min(lim.max, Math.max(lim.min, Math.round(startVal) - target));
     animateTo(target, () => {
       state.recipe.brewTemp = next;
       renderRecipe();

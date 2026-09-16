@@ -50,7 +50,7 @@ o toque no número abre o teclado para valores fora da lista. O Grind tem a lege
 moedor cadastrado no Decaid (`Grinder.settingSmallStep`) e, sem esse dado, é 0,05.
 
 **Brew.** Roleta contínua de 80 a 100 °C, em graus inteiros: os números acompanham o dedo
-(64 px por grau) e encaixam ao soltar, quando o valor vai para a máquina. Toque no número
+(64 px por grau; arrastar para a direita traz os menores para o centro) e encaixam ao soltar, quando o valor vai para a máquina. Toque no número
 central abre o teclado. A unidade `°C` fica parada na ponta da linha — rolar os números
 não mexe nela. A cor sai do tema, interpolando `--amber` (80 °C) e `--red`
 (100 °C), com um halo na mesma cor atrás do valor e os vizinhos apagados (35 % e 15 %).
