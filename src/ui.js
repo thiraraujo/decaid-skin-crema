@@ -1,7 +1,7 @@
 // CREMA v2 · tela principal (01 Home idle / 02 shot ao vivo).
 // Render puro a partir de `state` + interações da coluna da receita, carrossel e rodapé.
 
-import { bindValueDrag, placeRulerAt } from './drag.js';
+import { createWheel } from './wheel.js';
 import { state, setState, FIELDS, PRESETS, fieldFor, ratioText, clampStaticSeconds, tankMillilitres, TANK_FULL_ML } from './store.js';
 import { miniChart } from './chart.js';
 import { sleepMachine, wakeMachine, openAppSettings } from './host.js';
@@ -45,9 +45,7 @@ export function renderRecipe() {
   proc.style.visibility = r.coffeeProcess ? '' : 'hidden';
 
   $('grinder-name').textContent = r.grinderName || DASH;
-  $('grind-value').textContent = fmt(r.grind, 2);
-  $('grind-minus').disabled = r.grind == null;
-  $('grind-plus').disabled = r.grind == null;
+  renderGrindWheel();
   fitCoffeeName();
   valueWithUnit($('dose-value'), fmtInt(r.dose), 'g');
   valueWithUnit($('drink-value'), fmtInt(r.drink), 'g');
@@ -57,7 +55,6 @@ export function renderRecipe() {
   paintPresets('dose-chips', PRESETS.dose, r.dose);
   paintPresets('drink-chips', PRESETS.drink, r.drink);
 
-  placeRuler('grind-ruler', r.grind, FIELDS.grind);
 }
 
 // ---------- Brew: roleta 80–100 °C ----------
@@ -77,134 +74,74 @@ function heatRgb(temp) {
   return cold.map((v, i) => Math.round(v + (hot[i] - v) * t));
 }
 
+// ---------- roletas (Brew e Grind) ----------
+// A mecânica mora em src/wheel.js; aqui ficam só cor, formato e faixa de cada uma.
+let brewWheel = null;
+let grindWheel = null;
+
 const brewLabel = (v) => String(Math.round(v));   // Brew sempre em grau inteiro
 
-// Roleta contínua: os números acompanham o dedo (nada de pular de grau em grau) e, ao
-// soltar, deslizam até encaixar. Tamanho, cor e opacidade saem da distância até o centro,
-// interpolados — por isso o movimento fica liso mesmo entre dois graus.
-const BREW_SLOT = 64;          // px de dedo por grau
-const BREW_VISIBLE = 4;        // graus desenhados para cada lado
+// Brew: número um pouco menor que o padrão da roleta, para não pesar na coluna.
 const BREW_LEVELS = [
-  { size: 44, alpha: 1 },      // |p| = 0
-  { size: 26, alpha: .35 },    // |p| = 1
-  { size: 20, alpha: .15 },    // |p| = 2
-  { size: 16, alpha: 0 },      // |p| >= 3 (entra e sai sem piscar)
+  { size: 36, alpha: 1 },
+  { size: 22, alpha: .35 },
+  { size: 17, alpha: .15 },
+  { size: 14, alpha: 0 },
 ];
-const lerpN = (a, b, t) => a + (b - a) * t;
 
-let brewOffset = 0;            // deslocamento do arrasto, em graus (fracionário)
+// Grind: números mais largos (0.65, 20.00) pedem fonte menor ainda, senão os
+// vizinhos passam por cima do valor central.
+const GRIND_LEVELS = [
+  { size: 30, alpha: 1 },
+  { size: 18, alpha: .42 },
+  { size: 14, alpha: .20 },
+  { size: 12, alpha: 0 },
+];
 
-function brewLevel(ap) {
-  const i = Math.min(BREW_LEVELS.length - 2, Math.floor(ap));
-  const t = Math.min(1, ap - i);
-  const A = BREW_LEVELS[i], B = BREW_LEVELS[i + 1];
-  return { size: lerpN(A.size, B.size, t), alpha: lerpN(A.alpha, B.alpha, t) };
-}
-
-function layoutBrewWheel(offset = brewOffset) {
-  const items = $('brew-items');
-  if (!items) return;
-  brewOffset = offset;
-  // os números acompanham o dedo: arrastar para a direita traz os menores para o centro
-  for (const el of items.children) {
-    const p = Number(el.dataset.d) + offset;
-    const ap = Math.min(BREW_LEVELS.length - 1, Math.abs(p));
-    const { size, alpha } = brewLevel(ap);
-    el.style.transform = `translate(calc(-50% + ${(p * BREW_SLOT).toFixed(1)}px), -50%)`;
-    el.style.fontSize = `${size.toFixed(1)}px`;
-    el.style.opacity = alpha.toFixed(3);
-    el.classList.toggle('is-center', Math.abs(p) < .5);
-  }
-}
-
-// vizinhos na MESMA cor da temperatura, bem apagados (a opacidade faz o resto)
 function renderBrewWheel() {
-  const items = $('brew-items');
   const zone = $('brew-zone');
-  if (!items || !zone) return;
+  if (!zone || !brewWheel) return;
   const v = state.recipe.brewTemp;
-  if (v == null) {
-    zone.style.setProperty('--heat-rgb', '120,120,120');
-    items.innerHTML = `<span class="is-center" data-d="0" style="color:var(--label)">${DASH}</span>`;
-    layoutBrewWheel(0);
-    return;
-  }
-  zone.style.setProperty('--heat-rgb', heatRgb(v).join(','));
-  const f = FIELDS.brew;
-  const html = [];
-  for (let d = -BREW_VISIBLE; d <= BREW_VISIBLE; d++) {
-    const t = Math.round(v) + d;
-    if (t < f.min || t > f.max) continue;
-    html.push(`<span data-d="${d}" style="color:rgb(${heatRgb(t).join(',')})">${brewLabel(t)}</span>`);
-  }
-  items.innerHTML = html.join('');
-  layoutBrewWheel(0);
+  zone.style.setProperty('--heat-rgb', v == null ? '120,120,120' : heatRgb(v).join(','));
+  brewWheel.render();
 }
 
-// arrasto contínuo: o valor só vai para a máquina quando o dedo solta
-function bindBrewWheel() {
-  const zone = $('brew-zone');
-  if (!zone) return;
-  const f = () => FIELDS.brew;
-  let startX = null, startVal = null, moved = false, anim = null;
-  const scale = () => (document.querySelector('.app').getBoundingClientRect().width / 1320) || 1;
+function renderGrindWheel() {
+  if (grindWheel) grindWheel.render();
+}
 
-  const animateTo = (to, done) => {
-    const from = brewOffset;
-    const t0 = performance.now(), dur = 160;
-    let stop = false;
-    const finish = () => { if (stop) return; stop = true; anim = null; layoutBrewWheel(to); if (done) done(); };
-    const step = (now) => {
-      if (stop) return;
-      const k = Math.min(1, (now - t0) / dur);
-      layoutBrewWheel(from + (to - from) * (1 - Math.pow(1 - k, 3)));
-      if (k < 1) requestAnimationFrame(step); else finish();
-    };
-    anim = { finish };
-    requestAnimationFrame(step);
-    setTimeout(finish, dur + 120);   // a tela do kiosk pode congelar o rAF
-  };
-
-  zone.addEventListener('pointerdown', (e) => {
-    if (anim) anim.finish();
-    startVal = Number(state.recipe.brewTemp);
-    if (!Number.isFinite(startVal)) { startVal = null; return; }
-    startX = e.clientX;
-    moved = false;
-    try { zone.setPointerCapture(e.pointerId); } catch { /* sem captura */ }
+function bindWheels() {
+  brewWheel = createWheel({
+    zone: $('brew-zone'), items: $('brew-items'),
+    field: () => FIELDS.brew,
+    get: () => state.recipe.brewTemp,
+    set: (v) => { state.recipe.brewTemp = v; renderRecipe(); },
+    commit: () => pushBrewTemp(currentProfile()),
+    format: brewLabel,
+    color: (t, d) => {
+      const rgb = heatRgb(t).join(',');
+      return d === 0 ? `rgb(${rgb})` : `rgba(${rgb}, ${Math.abs(d) === 1 ? '.35' : '.15'})`;
+    },
+    slot: 64,
+    levels: BREW_LEVELS,
+    onTap: () => openNumpad('brew', state.recipe.brewTemp, (v) => setBrew(v)),
   });
 
-  zone.addEventListener('pointermove', (e) => {
-    if (startX == null) return;
-    const dx = (e.clientX - startX) / scale();
-    if (!moved && Math.abs(dx) < 8) return;
-    moved = true;
-    const lim = f();
-    // não deixa arrastar além das pontas da faixa (o sinal é invertido: arrastar para a
-    // direita diminui o valor, como numa lista que anda junto com o dedo)
-    const off = Math.max(startVal - lim.max, Math.min(startVal - lim.min, dx / BREW_SLOT));
-    layoutBrewWheel(off);
+  grindWheel = createWheel({
+    zone: $('grind-zone'), items: $('grind-items'),
+    // a faixa acompanha o valor da máquina (moedores como o EK43S usam 20,00) e o passo
+    // vem do cadastro do moedor no Decaid
+    field: () => ({ ...fieldFor('grind', state.recipe.grind ?? FIELDS.grind.min), step: grindStep() }),
+    get: () => state.recipe.grind,
+    set: (v) => { state.recipe.grind = v; renderRecipe(); },
+    commit: () => pushWorkflow(),
+    format: (v) => fmt(v, 2),
+    // tudo neutro: o azul continua exclusivo do ratio
+    color: (t, d) => (d === 0 ? 'var(--text)' : `rgba(var(--line-rgb), ${Math.abs(d) === 1 ? '.42' : '.20'})`),
+    slot: 64,
+    levels: GRIND_LEVELS,
+    onTap: () => openGrindNumpad(),
   });
-
-  const release = (e) => {
-    if (startX == null) return;
-    startX = null;
-    try { zone.releasePointerCapture(e.pointerId); } catch {}
-    if (!moved) {
-      if (e.target.closest('.is-center')) openNumpad('brew', state.recipe.brewTemp, (v) => setBrew(v));
-      return;
-    }
-    const lim = f();
-    const target = Math.round(brewOffset);
-    const next = Math.min(lim.max, Math.max(lim.min, Math.round(startVal) - target));
-    animateTo(target, () => {
-      state.recipe.brewTemp = next;
-      renderRecipe();
-      pushBrewTemp(currentProfile());
-    });
-  };
-  zone.addEventListener('pointerup', release);
-  zone.addEventListener('pointercancel', () => { if (startX != null) { startX = null; animateTo(0); } });
 }
 
 // "1:2.2" → 1 <colon> 2 <dec>.2</dec>; sem receita da máquina, só o traço.
@@ -232,8 +169,6 @@ function paintPresets(id, values, current) {
 
 // O marcador fica sempre no centro: a régua é "infinita" e o tique alinha com o valor.
 // Deslocamos o padrão de ticks para dar a sensação de trilho correndo sob o marcador.
-const placeRuler = (id, value, field) => placeRulerAt($(id), value, field.step);
-
 // Passo do − / + do Grind: o do moedor cadastrado no Decaid (Grinder.settingSmallStep,
 // rest_v1.yml); sem esse dado, o passo padrão do campo.
 function grindStep() {
@@ -243,17 +178,6 @@ function grindStep() {
 }
 
 const openGrindNumpad = () => openNumpad('grind', state.recipe.grind, (v) => setRecipe({ grind: v }));
-
-function nudgeGrind(dir) {
-  const cur = state.recipe.grind;
-  if (cur == null) return;   // sem valor lido da máquina não inventa ponto de partida
-  const step = grindStep();
-  const f = fieldFor('grind', cur);
-  const next = Math.round((cur + dir * step) / step) * step;
-  state.recipe.grind = Math.min(f.max, Math.max(f.min, Number(next.toFixed(4))));
-  renderRecipe();
-  pushWorkflow();
-}
 
 // ---------- nome do café ----------
 // 46px numa linha; se quebrar, 34px (até duas linhas); se nem assim couber, 28px.
@@ -604,20 +528,10 @@ export function initUI(chartInstance, dataSource, liveChart) {
   // o toque no número é tratado pelo arrasto (onTap) — aqui fica só o atalho de teclado
   $('dose-value').addEventListener('click', () => openNumpad('dose', state.recipe.dose, (v) => setRecipe({ dose: v })));
   $('drink-value').addEventListener('click', () => openNumpad('drink', state.recipe.drink, (v) => setRecipe({ drink: v })));
-  bindBrewWheel();   // roleta contínua do Brew (ver acima)
+  bindWheels();   // roletas do Brew e do Grind (src/wheel.js)
 
-  $('grind-minus').addEventListener('click', () => nudgeGrind(-1));
-  $('grind-plus').addEventListener('click', () => nudgeGrind(+1));
   // a largura do nome depende da fonte carregada: reajusta quando ela chega
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitCoffeeName);
-  // o bloco inteiro do Grind é área de arrasto (número incluído); toque abre o teclado
-  bindValueDrag($('grind-zone'), {
-    field: () => fieldFor('grind', state.recipe.grind ?? FIELDS.grind.min),
-    get: () => state.recipe.grind,
-    set: (v) => { state.recipe.grind = v; renderRecipe(); },
-    commit: () => pushWorkflow(),
-    onTap: (e) => { if (e.target.closest('#grind-value')) openGrindNumpad(); },
-  });
   bindPresets('dose-chips', (v) => setRecipe({ dose: v }));
   bindPresets('drink-chips', (v) => setRecipe({ drink: v }));
 
