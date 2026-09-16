@@ -243,9 +243,11 @@ html.is-loading .app { opacity: 0; transition: none; }
   position: absolute; left: 50%; top: 50%;
   line-height: 1; white-space: nowrap; will-change: transform, font-size, opacity;
 }
-/* a unidade acompanha quem está no centro, sem saltar de item em item */
-.rail__brew-items > span .u { display: none; font-size: 15px; color: var(--label); }
-.rail__brew-items > span.is-center .u { display: inline; }
+/* a unidade fica PARADA na ponta da linha: rolar os números não mexe nela */
+.rail__brew-unit {
+  position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
+  font: 400 15px var(--mono); color: var(--label); pointer-events: none;
+}
 
 .rail__machine {
   display: block; width: 100%; height: 150px;
