@@ -25,6 +25,7 @@ export const state = {
   profiles: { all: [], favorites: [] },
   selectedProfileId: null,
   loadedProfileTitle: null, // perfil que a máquina tem carregado
+  loadedProfileRaw: null,   // o PERFIL da máquina (base real dos deltas de Brew)
   profileBaseTemp: null,   // temperatura-base do perfil ativo (referência do Brew)
   chartMode: 'lastShot',       // 'lastShot' | 'plan' | 'live'
   staticAxis: true,           // vem do app (prefs) no boot
@@ -87,7 +88,7 @@ export const FIELDS = {
   grind: { title: 'Grind', min: 0, max: 100, step: 0.05, decimals: 2, unit: '' },
   dose:  { title: 'Dose',  min: 5, max: 30, step: 1, decimals: 1, unit: 'g' },
   drink: { title: 'Drink', min: 5, max: 120, step: 1, decimals: 1, unit: 'g' },
-  brew:  { title: 'Brew',  min: 80, max: 100, step: 1, decimals: 1, unit: '°C' },
+  brew:  { title: 'Brew',  min: 80, max: 100, step: 1, decimals: 0, unit: '°C' },
 };
 
 // A API não informa a escala do moedor (Grinder só tem settingType numeric|preset),

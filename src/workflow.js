@@ -89,19 +89,22 @@ export const pushWorkflow = debounced(() => {
 /** perfil selecionado no carrossel → PUT /workflow { profile } */
 export function pushProfile(profile) {
   if (!(source && source.putWorkflow) || !profile || !profile.raw) return;
+  // trocou de perfil: ele passa a ser a base dos ajustes de Brew
+  state.loadedProfileRaw = profile.raw;
   state.profileBaseTemp = baseTempOf(profile.raw);
   source.putWorkflow({ profile: profile.raw });
 }
 
-/** Brew: clona o perfil ativo e desloca a temperatura de cada step pelo delta */
+/** Brew: clona o perfil CARREGADO NA MÁQUINA e desloca a temperatura de cada step */
 export const pushBrewTemp = debounced((profile) => {
-  if (!(source && source.putWorkflow) || !profile || !profile.raw) return;
-  const steps = profile.raw.steps;
-  if (!Array.isArray(steps)) return;
-  const base = state.profileBaseTemp ?? baseTempOf(profile.raw);
+  if (!(source && source.putWorkflow)) return;
+  // o perfil da máquina é a referência; a cópia da biblioteca só serve se ela não informou
+  const src = state.loadedProfileRaw || (profile && profile.raw);
+  if (!src || !Array.isArray(src.steps)) return;
+  const base = baseTempOf(src);
   if (base == null) return;
   const delta = state.recipe.brewTemp - base;
-  const raw = JSON.parse(JSON.stringify(profile.raw));
+  const raw = JSON.parse(JSON.stringify(src));
   for (const s of raw.steps) {
     if (typeof s.temperature === 'number') s.temperature = +(s.temperature + delta).toFixed(1);
   }

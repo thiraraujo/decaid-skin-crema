@@ -39,9 +39,18 @@ function viewportSize() {
   return { w: pick(widths), h: pick(heights) };
 }
 
+// Com o teclado do sistema aberto (cadastro de café/moedor), a WebView passa a reportar
+// uma altura bem menor e a skin encolhia inteira, como se tivesse dado zoom out. Enquanto
+// houver campo de texto em foco, a escala fica como está; ao sair do campo, recalcula.
+const isTyping = () => {
+  const el = document.activeElement;
+  return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+};
+
 function fitApp() {
   const el = document.querySelector('.app');
   if (!el) return;
+  if (isTyping()) return;
   const { w, h } = viewportSize();
   if (!isFinite(w) || !isFinite(h)) return;
   const s = Math.min(w / CANVAS_W, h / CANVAS_H);
@@ -84,6 +93,11 @@ fitApp();
 paintDiag();
 window.addEventListener('resize', fitApp);
 window.addEventListener('orientationchange', fitApp);
+// ao fechar o teclado (campo perde o foco) a altura volta: refaz a escala. O campo pode
+// sumir da tela sem disparar `focusout` (o modal se redesenha), então uma checagem leve
+// a cada segundo garante que a skin volte ao tamanho certo.
+document.addEventListener('focusout', () => setTimeout(fitApp, 150));
+setInterval(() => { if (!isTyping()) fitApp(); }, 1000);
 if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', fitApp);
   window.visualViewport.addEventListener('scroll', fitApp);
@@ -361,10 +375,11 @@ async function loadProfiles(source, savedFavorites) {
     state.selectedProfileId = state.profiles.favorites[0].key;
   }
   // temperatura-base do perfil ativo: referência para os deltas do Brew
+  // só quando a máquina não informou o perfil (sem workflow): aí a referência é a biblioteca
   const sel = all.find((p) => p.key === state.selectedProfileId);
-  if (sel) {
+  if (sel && state.loadedProfileRaw == null) {
     state.profileBaseTemp = baseTempOf(sel.raw);
-    if (state.profileBaseTemp != null) state.recipe.brewTemp = state.profileBaseTemp;
+    if (state.profileBaseTemp != null) state.recipe.brewTemp = Math.round(state.profileBaseTemp);
   }
   renderCarousel();
 }
@@ -430,8 +445,18 @@ async function loadLibrary(source) {
         else a.steam.temp = await recallSteamTemp();   // desligado: a máquina tem 0 °C
       }
     }
-    // perfil carregado na máquina = o selecionado na skin
-    if (workflow.profile && workflow.profile.title) state.loadedProfileTitle = workflow.profile.title;
+    // perfil carregado na máquina = o selecionado na skin. Guardamos o perfil da MÁQUINA:
+    // é ele que recebe o deslocamento do Brew (a cópia da biblioteca pode ter outras
+    // temperaturas, e empurrar sobre ela desfazia o ajuste anterior).
+    if (workflow.profile && workflow.profile.title) {
+      state.loadedProfileTitle = workflow.profile.title;
+      state.loadedProfileRaw = workflow.profile;
+      const base = baseTempOf(workflow.profile);
+      if (base != null) {
+        state.profileBaseTemp = base;
+        state.recipe.brewTemp = Math.round(base);
+      }
+    }
   }
 }
 

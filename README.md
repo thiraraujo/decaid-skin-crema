@@ -45,10 +45,24 @@ duas ações — ★ favoritar e ☕ usar agora (entra no carrossel e vai para a
 As categorias saem do próprio título, que o Decaid escreve como `Categoria/Nome`
 (`Pour over basket/V60 22g in, 375g out`, `D-Flow / default`).
 
-Dose, Drink e Brew usam presets em botão redondo (18/20/22 g · 36/40/45 g · 88/92/95 °C);
-o toque no número abre o teclado para valores fora da lista. O Grind tem régua e botões
-− / + ao lado do número; o passo vem do moedor cadastrado no Decaid
-(`Grinder.settingSmallStep`) e, sem esse dado, é 0,05. O nome do café diminui quando
+Dose e Drink usam presets em botão redondo (18/20/22 g · 36/40/45 g);
+o toque no número abre o teclado para valores fora da lista. O Grind tem a legenda na linha, − / + nas pontas e a régua entre eles; o passo vem do
+moedor cadastrado no Decaid (`Grinder.settingSmallStep`) e, sem esse dado, é 0,05.
+
+**Brew.** Roleta contínua de 80 a 100 °C, em graus inteiros: os números acompanham o dedo
+(64 px por grau) e encaixam ao soltar, quando o valor vai para a máquina. Toque no número
+central abre o teclado. A cor sai do tema, interpolando `--amber` (80 °C) e `--red`
+(100 °C), com um halo na mesma cor atrás do valor e os vizinhos apagados (35 % e 15 %).
+A documentação não fixa limites para `ProfileStep.temperature`; o teto real é do firmware,
+que recebe a temperatura como `temp × 2` em 1 byte (127,5 °C, passo 0,5 °C).
+
+**Base do Brew.** O deslocamento de temperatura é aplicado sobre o perfil **carregado na
+máquina** (`workflow.profile`), não sobre a cópia da biblioteca — com a cópia, um ajuste
+desfazia o anterior. Trocar de perfil no carrossel redefine essa base.
+
+O Ratio fica numa pílula com o fundo do acento a 12 % e anel a 35 %, decimal em 55 % na
+linha de base, com um traço abaixo e a divisória entre Dose e Drink (o mesmo 1 px dos
+separadores da coluna). O nome do café diminui quando
 quebra linha (46 px → 34 px em duas linhas → 28 px).
 
 O carrossel de favoritos é contínuo: os cards acompanham o dedo durante o arrasto
