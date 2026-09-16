@@ -43,7 +43,7 @@ export function renderRecipe() {
   proc.textContent = r.coffeeProcess || '';
   proc.style.visibility = r.coffeeProcess ? '' : 'hidden';
 
-  $('grinder-name').innerHTML = `${r.grinderName || DASH}<span class="rail__caret">⌄</span>`;
+  $('grinder-name').textContent = r.grinderName || DASH;
   $('grind-value').textContent = fmt(r.grind, 2);
   $('grind-minus').disabled = r.grind == null;
   $('grind-plus').disabled = r.grind == null;

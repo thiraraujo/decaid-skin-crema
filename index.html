@@ -65,7 +65,7 @@
 
       <button class="row rail__full rail__sep tap" id="grinder-btn" type="button">
         <span class="lb">Grinder</span>
-        <span class="rail__grinder" id="grinder-name">—<span class="rail__caret">⌄</span></span>
+        <span class="rail__grinder" id="grinder-name">—</span>
       </button>
 
       <div class="rail__full rail__sep">
@@ -73,10 +73,12 @@
         <div class="rail__grind-zone" id="grind-zone">
           <div class="rail__grind-row">
             <button class="stepper tap" id="grind-minus" type="button" aria-label="Finer grind">−</button>
-            <button class="mono rail__grind tap" id="grind-value" type="button">—</button>
+            <div class="rail__grind-mid">
+              <button class="mono rail__grind tap" id="grind-value" type="button">—</button>
+              <div class="ruler" id="grind-ruler" data-field="grind"><b></b><i></i></div>
+            </div>
             <button class="stepper tap" id="grind-plus" type="button" aria-label="Coarser grind">+</button>
           </div>
-          <div class="ruler" id="grind-ruler" data-field="grind" style="width:300px"><b></b><i></i></div>
         </div>
       </div>
 
