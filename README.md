@@ -117,6 +117,12 @@ reacende o estado quando o `/devices` já diz que a máquina caiu.
   gravadas nas `measurements` (shot antigo sem esse campo usa os tempos do perfil).
 - **Eixo da direita (peso):** escala 0–100 g, sem números.
 
+**Café e moedor vão para a máquina na hora.** Escolher (ou cadastrar) café/moedor na tela
+Coffee & Grinder grava o workflow imediatamente. O Decaid guarda o shot com o
+`currentWorkflow` no fim da extração (`de1_state_manager.dart · _persistShotIfNeeded`), então
+sem essa gravação o shot saía com o café anterior — só chegava à máquina quando outro
+controle (dose, drink, moagem) empurrava a receita.
+
 No **Edit** do histórico, tocar em Coffee ou Grinder abre a lista do que já está
 cadastrado no Decaid (a mesma da tela inicial) — antes cada toque pulava para o próximo
 item, o que parecia não funcionar. Cadastrar café ou moedor novo continua em

@@ -283,6 +283,7 @@ function paintCol(kind) {
     if (isCoffee) Object.assign(state.recipe, { coffeeId: it.id, coffeeName: it.name, coffeeBrand: it.brand || '', coffeeProcess: it.process || '' });
     else Object.assign(state.recipe, { grinderId: it.id, grinderName: it.name });
     paintCol(kind);
+    pushWorkflow();          // o shot é gravado com o workflow da máquina: sem isto, ficava o café anterior
     onApplied && onApplied();
   };
 }
@@ -305,6 +306,7 @@ async function commitNew(kind) {
   }
   creating[kind] = false;
   paintCol(kind);
+  pushWorkflow();          // café/moedor recém-criado também vai para a máquina
   onApplied && onApplied();
 }
 
