@@ -265,16 +265,18 @@ html.is-loading .app { opacity: 0; transition: none; }
   border-radius: 0;
   display: flex; flex-direction: column;
 }
+/* o filete desce: mais respiro entre os valores de cima (Hot water/Steam/Flush) e a
+   linha, e menos entre a linha e MIX/GROUP */
 .rail__aux {
   display: flex; justify-content: space-between; text-align: center;
-  padding-bottom: 16px; border-bottom: 1px solid var(--hairline);
+  padding-bottom: 18px; border-bottom: 1px solid var(--hairline);
 }
 .rail__aux-item { flex: 1; }
 .rail__aux-item .ic { margin: 0 auto; }
 .rail__aux-glyph { font-size: 18px; line-height: 20px; color: var(--text-2); }
 .rail__aux-item .lb { margin-top: 5px; }
-.rail__aux-value { font-size: 16px; color: var(--text-blue); margin-top: 2px; font-weight: 400; }
-.rail__temps { flex: 1; align-items: center; }
+.rail__aux-value { font-size: 16px; color: var(--text-blue); margin-top: 8px; font-weight: 400; }
+.rail__temps { flex: none; align-items: center; margin-top: 10px; }
 .rail__temp { color: var(--text-blue); font-size: 20px; letter-spacing: 0; }
 
 /* ---------- conteúdo ---------- */
