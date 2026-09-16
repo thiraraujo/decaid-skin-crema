@@ -3,6 +3,7 @@
 import { state, FIELDS } from './store.js';
 import { createChart } from './chart.js';
 import { openNumpad } from './numpad.js';
+import { bindValueDrag, placeRulerAt } from './drag.js';
 import { pushWorkflow } from './workflow.js';
 
 let source = null;
@@ -383,8 +384,16 @@ function buildEdit() {
       <label class="field-row"><span class="lb">Grinder</span><button class="field field--select tap" id="ed-grinder" type="button"></button></label>
       <div class="field-row">
         <span class="lb">Grind size</span>
-        <button class="mono editshot__grind tap" id="ed-grind" type="button"></button>
-        <div class="ruler" id="ed-ruler" style="width:100%"><b></b><i></i></div>
+        <div class="editshot__grind-zone" id="ed-grind-zone">
+          <div class="editshot__grind-row">
+            <button class="stepper tap" id="ed-grind-minus" type="button" aria-label="Finer grind">−</button>
+            <div class="editshot__grind-mid">
+              <button class="mono editshot__grind tap" id="ed-grind" type="button"></button>
+              <div class="ruler" id="ed-ruler"><b></b><i></i></div>
+            </div>
+            <button class="stepper tap" id="ed-grind-plus" type="button" aria-label="Coarser grind">+</button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="mono editshot__note">Updates THIS shot in the Decent history and on Visualizer (same shot — it does not create a new one).</div>`;
@@ -392,8 +401,31 @@ function buildEdit() {
 
   editEl.querySelector('#ed-cancel').addEventListener('click', hideEdit);
   editEl.querySelector('#ed-save').addEventListener('click', saveEdit);
-  editEl.querySelector('#ed-grind').addEventListener('click', () => {
-    openNumpad('grind', editDraft.grind, (v) => { editDraft.grind = v; paintEdit(); });
+  // mesmas regras da home: bloco inteiro arrasta (0,05 por tique), − / + ao lado e
+  // toque no número abre o teclado
+  const editField = () => {
+    const f = FIELDS.grind;
+    const v = Number(editDraft && editDraft.grind);
+    if (!Number.isFinite(v) || (v >= f.min && v <= f.max)) return f;
+    return { ...f, min: Math.min(f.min, Math.floor(v)), max: Math.max(f.max, Math.ceil(v * 1.5 / 10) * 10) };
+  };
+  const nudge = (dir) => {
+    const cur = Number(editDraft && editDraft.grind);
+    if (!Number.isFinite(cur)) return;
+    const f = editField();
+    editDraft.grind = Math.min(f.max, Math.max(f.min, Number((cur + dir * f.step).toFixed(4))));
+    paintEdit();
+  };
+  editEl.querySelector('#ed-grind-minus').addEventListener('click', () => nudge(-1));
+  editEl.querySelector('#ed-grind-plus').addEventListener('click', () => nudge(+1));
+  bindValueDrag(editEl.querySelector('#ed-grind-zone'), {
+    field: editField,
+    get: () => (editDraft ? editDraft.grind : null),
+    set: (v) => { editDraft.grind = v; paintEdit(); },
+    onTap: (e) => {
+      if (!e.target.closest('#ed-grind')) return;
+      openNumpad('grind', editDraft.grind, (v) => { editDraft.grind = v; paintEdit(); });
+    },
   });
   editEl.querySelector('#ed-coffee').addEventListener('click', () => openChooser('coffee'));
   editEl.querySelector('#ed-grinder').addEventListener('click', () => openChooser('grinder'));
@@ -461,10 +493,9 @@ function paintEdit() {
   editEl.querySelector('#ed-coffee').innerHTML = `${esc(editDraft.coffee || '—')}${editDraft.brand ? ` <span class="field__brand">${esc(editDraft.brand)}</span>` : ''}<span class="field__caret">⌄</span>`;
   editEl.querySelector('#ed-grinder').innerHTML = `${esc(editDraft.grinder || '—')}<span class="field__caret">⌄</span>`;
   editEl.querySelector('#ed-grind').textContent = fmt(editDraft.grind, 2);
-  const f = FIELDS.grind;
-  const off = (editDraft.grind / f.step) * 7;
-  const r = editEl.querySelector('#ed-ruler');
-  r.style.backgroundPositionX = `${-off % 35}px, ${-off % 35}px`;
+  editEl.querySelector('#ed-grind-minus').disabled = editDraft.grind == null;
+  editEl.querySelector('#ed-grind-plus').disabled = editDraft.grind == null;
+  placeRulerAt(editEl.querySelector('#ed-ruler'), editDraft.grind, FIELDS.grind.step);
 }
 
 export function openEditShot(shot) {
@@ -472,7 +503,10 @@ export function openEditShot(shot) {
   if (!editEl) buildEdit();
   editDraft = {
     id: shot.id, coffee: shot.coffee || '', brand: shot.brand || '', coffeeId: shot.coffeeId || null,
-    grinder: shot.grinder || '', grinderId: shot.grinderId || null, grind: shot.grind ?? 0,
+    grinder: shot.grinder || '', grinderId: shot.grinderId || null,
+    // a API guarda a moagem como TEXTO (Grinder.settingSmallStep/grinderSetting são
+    // strings): sem converter, o − / + concatenava em vez de somar
+    grind: Number.isFinite(Number(shot.grind)) && shot.grind !== '' && shot.grind != null ? Number(shot.grind) : null,
   };
   editEl.querySelector('#ed-sub').textContent = [shot.when, shot.profile].filter(Boolean).join(' · ');
   paintEdit();

@@ -69,22 +69,24 @@
       </button>
 
       <div class="rail__full rail__sep">
-        <div class="row"><span class="lb">Grind</span></div>
         <div class="rail__grind-zone" id="grind-zone">
           <div class="rail__grind-row">
+            <span class="lb rail__grind-lb">Grind</span>
             <button class="stepper tap" id="grind-minus" type="button" aria-label="Finer grind">−</button>
-            <div class="rail__grind-mid">
-              <button class="mono rail__grind tap" id="grind-value" type="button">—</button>
-              <div class="ruler" id="grind-ruler" data-field="grind"><b></b><i></i></div>
-            </div>
+            <button class="mono rail__grind tap" id="grind-value" type="button">—</button>
             <button class="stepper tap" id="grind-plus" type="button" aria-label="Coarser grind">+</button>
+          </div>
+          <div class="rail__grind-rulerrow">
+            <span class="rail__grind-lb" aria-hidden="true"></span>
+            <div class="ruler" id="grind-ruler" data-field="grind"><b></b><i></i></div>
           </div>
         </div>
       </div>
 
       <div class="rail__ratio">
         <div class="lb lb--blue">Ratio</div>
-        <div class="mono rail__ratio-value" id="ratio-value">1<span class="colon">:</span>0.0</div>
+        <div class="mono rail__ratio-value" id="ratio-value">1<span class="colon">:</span>0<span class="dec">.0</span></div>
+        <div class="rail__ratio-rule"></div>
         <div class="rail__ratio-cols">
           <div class="rail__col">
             <div class="lb">Dose</div>
@@ -99,13 +101,11 @@
         </div>
       </div>
 
-      <div class="row rail__full rail__brew">
+      <div class="rail__full rail__brew" id="brew-zone">
         <span class="lb">Brew</span>
-        <button class="mono rail__brew-value tap" id="brew-value" type="button">—<span class="u">°C</span></button>
-        <div class="rail__brew-chips" id="brew-chips">
-          <button class="chip chip--round" data-temp="88" type="button">88</button>
-          <button class="chip chip--round" data-temp="92" type="button">92</button>
-          <button class="chip chip--round" data-temp="95" type="button">95</button>
+        <div class="rail__brew-wheel">
+          <span class="rail__brew-halo" id="brew-halo" aria-hidden="true"></span>
+          <div class="rail__brew-items" id="brew-items"></div>
         </div>
       </div>
 

@@ -89,7 +89,8 @@
 }
 
 /* ======================= 04 · teclado numérico ======================= */
-.numpad { padding: 36px 60px; display: flex; flex-direction: column; }
+/* o teclado cobre tudo: abre por cima do Edit do histórico e da lista de escolha */
+.numpad { padding: 36px 60px; display: flex; flex-direction: column; z-index: 80; }
 .numpad__head {
   display: flex; align-items: center; justify-content: space-between;
   padding-bottom: 22px; border-bottom: 1px solid var(--border-soft);
@@ -330,7 +331,12 @@
 .field--select { justify-content: space-between; height: 60px; font-size: 20px; }
 .field__brand { color: var(--blue); font-weight: 500; }
 .field__caret { color: var(--label); margin-left: auto; }
-.editshot__grind { font-size: 44px; line-height: 1.1; }
+/* mesmo bloco da home: área ampla de arrasto, número e régua entre − e + */
+.editshot__grind-zone { touch-action: none; padding: 6px 0 10px; }
+.editshot__grind-row { display: flex; align-items: center; gap: 16px; }
+.editshot__grind-mid { flex: 1; min-width: 0; }
+.editshot__grind { display: block; width: 100%; font-size: 44px; line-height: 1.1; text-align: center; }
+.editshot__grind-row .stepper[disabled] { opacity: .3; }
 .editshot__note { font-size: 13px; color: var(--label); font-weight: 400; margin-top: 16px; line-height: 1.5; }
 
 /* escolher café/moedor dentro do Edit — só a lista do que já está cadastrado */

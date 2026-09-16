@@ -174,15 +174,18 @@ html.is-loading .app { opacity: 0; transition: none; }
 .rail__coffee-name { display: block; font: 600 46px/1.05 var(--sans); }
 .rail__coffee-brand { display: block; font: 500 21px var(--sans); color: var(--blue); margin-top: 2px; }
 
-.rail__grinder { font: 600 20px var(--sans); color: var(--text); }
+.rail__grinder { font: 600 22px var(--sans); color: var(--text); }
 .rail__caret { color: var(--label); font-size: 15px; margin-left: 4px; }
 
 /* arrastar o dedo em qualquer ponto daqui (inclusive sobre o número) muda a moagem */
+/* Grind no estilo do Grinder: legenda na linha, − logo depois dela, + na borda, número
+   centralizado entre os dois e a régua cobrindo exatamente o vão entre os botões. */
 .rail__grind-zone { width: 100%; touch-action: none; padding-bottom: 6px; }
-.rail__grind-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 2px; }
-/* número e régua na mesma coluna, entre o − e o + */
-.rail__grind-mid { flex: 1; min-width: 0; }
-.rail__grind { display: block; width: 100%; font-size: 36px; line-height: 1.1; }
+.rail__grind-row { display: flex; align-items: center; gap: 10px; }
+.rail__grind-lb { width: 44px; flex: none; text-align: left; }
+.rail__grind { flex: 1; min-width: 0; font-size: 26px; line-height: 1.1; text-align: center; }
+.rail__grind-rulerrow { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.rail__grind-rulerrow .ruler { flex: 1; min-width: 0; margin-top: 0; }
 .rail__grind-row .stepper[disabled] { opacity: .3; }
 
 .rail__ratio {
@@ -191,20 +194,58 @@ html.is-loading .app { opacity: 0; transition: none; }
   border-top: 1px solid var(--divider);
   border-bottom: 1px solid var(--divider);
 }
-.rail__ratio-value { font-size: 66px; line-height: 1; margin-top: 4px; color: var(--blue); }
+/* Ratio em pílula: fundo do acento a 12% e anel fino a 35%. Tudo por token
+   (--blue-rgb muda em cada tema), então vale nos 12 temas sem regra extra. */
+.rail__ratio-value {
+  display: inline-block; margin-top: 6px;
+  padding: 6px 20px 8px; border-radius: 18px;
+  font-size: 58px; line-height: 1; color: var(--blue);
+  background: rgba(var(--blue-rgb), .12);
+  box-shadow: inset 0 0 0 1px rgba(var(--blue-rgb), .35);
+}
 .rail__ratio-value .colon { font-size: .55em; vertical-align: .12em; }
-.rail__ratio-cols { display: flex; gap: 16px; justify-content: center; margin-top: 12px; }
+/* decimal menor, assentado na mesma linha de base */
+.rail__ratio-value .dec { font-size: .55em; vertical-align: baseline; }
+/* sem receita lida da máquina a pílula some e fica só o traço */
+.rail__ratio-value.is-empty { background: none; box-shadow: none; padding-left: 0; padding-right: 0; }
+/* traço abaixo do ratio e divisória entre Dose e Drink — mesmo 1px dos separadores */
+.rail__ratio-rule { height: 1px; background: var(--divider); margin-top: 16px; }
+.rail__ratio-cols { display: flex; gap: 16px; justify-content: center; margin-top: 12px; position: relative; }
+.rail__ratio-cols::before {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 50%;
+  width: 1px; background: var(--divider);
+}
 .rail__col { width: 128px; }
 .rail__col-value { display: block; width: 100%; font-size: 36px; line-height: 1.1; margin-top: 4px; }
 .rail__col-value--amber { color: var(--amber); }
 .rail__col-value .u, .rail__grind .u { font-size: 15px; }
 .rail__col-chips { display: flex; gap: 6px; justify-content: center; margin-top: 10px; }
 
-.rail__brew { width: 100%; padding: 0 6px; margin-top: auto; }
-.rail__brew-value { font-size: 34px; line-height: 1.1; color: var(--red); }
-.rail__brew-value .u { font-size: 15px; }
-.rail__brew-chips { display: flex; gap: 6px; }
-.rail__brew-chips .chip--round { width: 36px; height: 36px; font-size: 14px; }
+/* Brew: roleta de 80 a 100 °C. O dedo arrasta na horizontal (≈40px por grau), o valor
+   do meio é o escolhido e um halo na cor da temperatura marca a posição. Os vizinhos
+   ficam na MESMA cor, bem apagados — a cor vem do tema (âmbar → vermelho). */
+.rail__brew { width: 100%; padding: 0 6px; margin-top: auto; touch-action: none; }
+.rail__brew-wheel { position: relative; height: 64px; display: flex; align-items: center; margin-top: 6px; }
+.rail__brew-halo {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 150px; height: 78px; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(var(--heat-rgb), .28), transparent);
+}
+/* os números são posicionados pelo JS (layoutBrewWheel): tamanho, opacidade e posição
+   saem da distância até o centro, então o movimento acompanha o dedo sem pular */
+.rail__brew-items {
+  position: relative; flex: 1; min-width: 0; height: 64px; overflow: hidden;
+  font-family: var(--mono);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent);
+}
+.rail__brew-items > span {
+  position: absolute; left: 50%; top: 50%;
+  line-height: 1; white-space: nowrap; will-change: transform, font-size, opacity;
+}
+/* a unidade acompanha quem está no centro, sem saltar de item em item */
+.rail__brew-items > span .u { display: none; font-size: 15px; color: var(--label); }
+.rail__brew-items > span.is-center .u { display: inline; }
 
 .rail__machine {
   display: block; width: 100%; height: 150px;
