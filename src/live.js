@@ -9,6 +9,7 @@ import { state, ratioText } from './store.js';
 import { createChart } from './chart.js';
 
 const $ = (id) => document.getElementById(id);
+const host = () => $('live-phases');
 const DASH = '—';
 
 let chart = null;
@@ -117,7 +118,8 @@ export function onLiveSample(m) {
       pressStart: m.pressure, pressPeak: m.pressure, pressEnd: m.pressure,
       flowStart: m.flow, flowEnd: m.flow,
     };
-    renderPhases();
+    if (host() && host().children.length === phases.filter(Boolean).length - 1) appendPhase(phases[idx]);
+    else renderPhases();
     paintChartPhases();
     return;
   }
@@ -153,7 +155,16 @@ function paintChartPhases() {
 }
 
 // ---------- blocos ----------
+// Valores como "7.4 → 8.8 → 0" estouram a largura do card: a fonte encolhe conforme o
+// texto cresce, sem mexer no tamanho do card.
+function vClass(text) {
+  const n = String(text).length;
+  return n > 14 ? ' phase-card__v--xs' : n > 10 ? ' phase-card__v--sm' : '';
+}
+
 function cardHTML(p, isCurrent) {
+  const press = range(p.pressStart, p.pressPeak, p.pressEnd);
+  const flow = range(p.flowStart, null, p.flowEnd);
   return `
     <div class="phase-card${isCurrent ? ' is-current' : ''}" data-n="${p.n}">
       <div class="row phase-card__head">
@@ -165,37 +176,36 @@ function cardHTML(p, isCurrent) {
       </div>
       <div class="phase-card__row"><span class="lb">Yield</span><span class="phase-card__v phase-card__v--yield" data-role="yield">${num(p.yieldEnd)}<span class="u"> g</span></span></div>
       <div class="phase-card__row"><span class="lb">Temp</span><span class="phase-card__v phase-card__v--temp" data-role="temp">${span(p.tempMin, p.tempMax)}<span class="u"> °</span></span></div>
-      <div class="phase-card__row"><span class="lb">Pressure</span><span class="phase-card__v phase-card__v--press" data-role="press">${range(p.pressStart, p.pressPeak, p.pressEnd)}</span></div>
-      <div class="phase-card__row"><span class="lb">Flow</span><span class="phase-card__v phase-card__v--flow" data-role="flow">${range(p.flowStart, null, p.flowEnd)}</span></div>
+      <div class="phase-card__row"><span class="lb">Pressure</span><span class="phase-card__v phase-card__v--press${vClass(press)}" data-role="press">${press}</span></div>
+      <div class="phase-card__row"><span class="lb">Flow</span><span class="phase-card__v phase-card__v--flow${vClass(flow)}" data-role="flow">${flow}</span></div>
     </div>`;
 }
 
+// Um card por fase que JÁ começou, criado no momento em que ela começa — sem vaga
+// pontilhada da "próxima": a DE1 pula steps por condição de saída (o step 2 de um
+// perfil pode nunca acontecer), e a vaga anunciava um número que não vinha.
 function renderPhases() {
   const host = $('live-phases');
   if (!host) return;
-  const started = phases.filter(Boolean);
-  let html = started.map((p, i) => cardHTML(p, i === current)).join('');
+  host.innerHTML = phases.filter(Boolean).map((p, i, all) => cardHTML(p, i === all.length - 1)).join('');
+  scrolledTo = current;
+  scrollToEnd(host);
+}
 
-  const next = steps[current + 1];
-  if (next) {
-    html += `
-      <div class="phase-slot">
-        <span class="phase-slot__n">${next.n}</span>
-        <span class="phase-slot__label">${esc(next.name)}</span>
-      </div>`;
-  }
-  host.innerHTML = html;
-
-  // o slot da próxima fase "vira" bloco: 100→212px + fade dos valores (250ms)
-  if (current !== scrolledTo) {
-    const card = host.querySelector('.phase-card.is-current');
-    if (card) {
-      card.classList.add('is-entering');
-      requestAnimationFrame(() => requestAnimationFrame(() => card.classList.remove('is-entering')));
-    }
-    scrolledTo = current;
-    scrollToEnd(host);
-  }
+/** acrescenta só o card da fase que acabou de começar (não refaz os anteriores) */
+function appendPhase(p) {
+  const host = $('live-phases');
+  if (!host) return;
+  const prev = host.querySelector('.phase-card.is-current');
+  if (prev) prev.classList.remove('is-current');
+  const wrap = document.createElement('div');
+  wrap.innerHTML = cardHTML(p, true).trim();
+  const card = wrap.firstElementChild;
+  card.classList.add('is-entering');
+  host.appendChild(card);
+  requestAnimationFrame(() => requestAnimationFrame(() => card.classList.remove('is-entering')));
+  scrolledTo = current;
+  scrollToEnd(host);
 }
 
 // atualização barata da fase corrente a cada amostra (sem refazer o DOM)
@@ -212,6 +222,16 @@ function updateCurrentCard() {
   set('time', mmss(p.end - p.start));
   set('yield', `${num(p.yieldEnd)}<span class="u"> g</span>`);
   set('temp', `${span(p.tempMin, p.tempMax)}<span class="u"> °</span>`);
-  set('press', range(p.pressStart, p.pressPeak, p.pressEnd));
-  set('flow', range(p.flowStart, null, p.flowEnd));
+  const press = range(p.pressStart, p.pressPeak, p.pressEnd);
+  const flow = range(p.flowStart, null, p.flowEnd);
+  set('press', press);
+  set('flow', flow);
+  const fit = (role, text) => {
+    const el = card.querySelector(`[data-role="${role}"]`);
+    if (!el) return;
+    el.classList.toggle('phase-card__v--sm', String(text).length > 10 && String(text).length <= 14);
+    el.classList.toggle('phase-card__v--xs', String(text).length > 14);
+  };
+  fit('press', press);
+  fit('flow', flow);
 }

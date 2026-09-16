@@ -129,6 +129,9 @@ function toShot(r) {
     id: r.id, profile: r.profile, coffee: r.coffee, brand: r.brand,
     coffeeId: r.coffeeId ?? null, grinder: r.grinder, grinderId: r.grinderId ?? null,
     grind: r.grind, dose: r.dose, yield: r.yield, brewTemp: r.brewTemp ?? null,
+    // planejado (workflow do shot) e realizado (annotations / balança) — src/api.js
+    planDose: r.planDose ?? null, planYield: r.planYield ?? null,
+    realDose: r.realDose ?? null, realYield: r.realYield ?? null,
     duration: r.duration ?? null, at: Number.isNaN(at) ? null : at,
     when: whenLabel(at), series: r.series || null,
   };
@@ -168,7 +171,15 @@ async function boot() {
   initUI(chart, source, liveChart);
 
   // ---------- telemetria ----------
+  // Substates de extração (websocket_v1.yml · MachineSubstate). Depois que a máquina
+  // para de puxar (pouringDone), o snapshot ainda manda quedas de pressão e fluxo — é o
+  // ruído que aparecia no fim do gráfico ao vivo. O shot gravado não tem isso, e a
+  // Bestpresso usa o mesmo critério (ESPRESSO_EXTRACTION_SUBSTATES).
+  const EXTRACTION_SUBSTATES = new Set(['preinfusion', 'pouring']);
+  let lastSnapshotAt = 0;
+
   source.onSnapshot((m) => {
+    lastSnapshotAt = Date.now();
     const mc = state.machine;
     mc.mixTemp = m.mixTemp;
     mc.groupTemp = m.groupTemp;
@@ -176,10 +187,16 @@ async function boot() {
     mc.targetGroupTemp = m.targetGroupTemp;
     mc.state = m.state || 'idle';
     mc.substate = m.substate || '';
+    // se o /devices diz que a máquina não está conectada, o estado do snapshot não vale
+    if (mc.link && mc.link.machine && mc.link.machine.state !== 'connected') mc.state = 'disconnected';
     // prontidão real: estado + temperaturas x alvos, com memória (src/readiness.js)
     mc.readiness = readiness.evaluate(mc);
     renderMachine();
     if (!m.running) return;
+    // cabeça do shot (preparingForShot) entra; a cauda depois de despejar, não
+    const extracting = EXTRACTION_SUBSTATES.has((m.substate || '').toLowerCase());
+    if (extracting) state.live.poured = true;
+    if (!extracting && state.live.poured) { state.live.frozen = true; return; }   // acabou de despejar: congela a curva
     const s = state.live.series;
     s.pressure.push([m.t, m.pressure]);
     s.flow.push([m.t, m.flow]);
@@ -211,7 +228,7 @@ async function boot() {
     sc.weight = w.weight;
     sc.flow = w.weightFlow;
     sc.battery = w.battery;
-    if (state.live.running) {
+    if (state.live.running && !state.live.frozen) {
       const s = state.live.series;
       const t = s.pressure.length ? s.pressure[s.pressure.length - 1][0] : 0;
       s.weight.push([t, w.weight]);
@@ -250,7 +267,7 @@ async function boot() {
   source.onShotStart(() => {
     const p = currentProfile();
     state.live = {
-      running: true, t: 0, profile: (p && p.raw) || null,
+      running: true, t: 0, poured: false, frozen: false, profile: (p && p.raw) || null,
       series: { pressure: [], flow: [], temp: [], weight: [], pressureTarget: [], flowTarget: [] },
     };
     onShotStarted();
@@ -261,6 +278,23 @@ async function boot() {
     onShotEnded();
     loadHistory(source).then(() => { renderLastShot(); renderChart(); });
   });
+
+  // A máquina desligada no botão não manda snapshot nenhum (websocket_v1.yml: o socket
+  // "remains open and silent while no machine is attached"). Sem frames por 10 s, a
+  // pílula vira DISCONNECTED em vez de congelar no último estado (ex.: HEATING).
+  const SNAPSHOT_TIMEOUT_MS = 10000;
+  if (useBridge) {
+    setInterval(() => {
+      const mc = state.machine;
+      if (!lastSnapshotAt || Date.now() - lastSnapshotAt < SNAPSHOT_TIMEOUT_MS) return;
+      if (mc.readiness === 'disconnected') return;
+      console.warn('[CREMA] sem snapshot da máquina há 10 s → desconectada');
+      mc.state = 'disconnected';
+      mc.readiness = 'disconnected';
+      readiness.reset();
+      renderMachine();
+    }, 2000);
+  }
 
   // ---------- carga inicial ----------
   if (useBridge) {

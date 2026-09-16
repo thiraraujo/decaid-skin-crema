@@ -177,6 +177,8 @@ html.is-loading .app { opacity: 0; transition: none; }
 .rail__grinder { font: 600 20px var(--sans); color: var(--text); }
 .rail__caret { color: var(--label); font-size: 15px; margin-left: 4px; }
 
+/* arrastar o dedo em qualquer ponto daqui (inclusive sobre o número) muda a moagem */
+.rail__grind-zone { width: 100%; touch-action: none; padding-bottom: 6px; }
 .rail__grind-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 2px; }
 .rail__grind { display: block; flex: 1; min-width: 0; font-size: 36px; line-height: 1.1; }
 .rail__grind-row .stepper[disabled] { opacity: .3; }
@@ -498,6 +500,9 @@ html.is-loading .app { opacity: 0; transition: none; }
 .phase-card__row .lb { font-size: 9px; width: 64px; flex: none; }
 .phase-card__v { font-family: var(--mono); font-weight: 500; font-size: 16px; white-space: nowrap; }
 .phase-card__v .u { font-size: 10px; color: var(--label); }
+/* "7.4 → 8.8 → 0" não cabe em 16px: encolhe a fonte, o card fica do mesmo tamanho */
+.phase-card__v--sm { font-size: 14px; }
+.phase-card__v--xs { font-size: 12px; }
 .phase-card__v--yield { color: var(--amber); }
 .phase-card__v--temp { color: var(--red); }
 .phase-card__v--press { color: var(--green); }

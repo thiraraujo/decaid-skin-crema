@@ -70,12 +70,14 @@
 
       <div class="rail__full rail__sep">
         <div class="row"><span class="lb">Grind</span></div>
-        <div class="rail__grind-row">
-          <button class="stepper tap" id="grind-minus" type="button" aria-label="Finer grind">−</button>
-          <button class="mono rail__grind tap" id="grind-value" type="button">—</button>
-          <button class="stepper tap" id="grind-plus" type="button" aria-label="Coarser grind">+</button>
+        <div class="rail__grind-zone" id="grind-zone">
+          <div class="rail__grind-row">
+            <button class="stepper tap" id="grind-minus" type="button" aria-label="Finer grind">−</button>
+            <button class="mono rail__grind tap" id="grind-value" type="button">—</button>
+            <button class="stepper tap" id="grind-plus" type="button" aria-label="Coarser grind">+</button>
+          </div>
+          <div class="ruler" id="grind-ruler" data-field="grind" style="width:300px"><b></b><i></i></div>
         </div>
-        <div class="ruler" id="grind-ruler" data-field="grind" style="width:300px"><b></b><i></i></div>
       </div>
 
       <div class="rail__ratio">

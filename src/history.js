@@ -19,7 +19,22 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const app = () => document.querySelector('.app');
 const fmt = (v, d = 1) => (v == null || Number.isNaN(Number(v)) ? '—' : Number(v).toFixed(d));
 const fmtInt = (v) => (v == null || Number.isNaN(Number(v)) ? '—' : String(Math.round(v)));
-const ratioOf = (s) => (s.dose && s.yield ? `1:${(s.yield / s.dose).toFixed(1)}` : '—');
+// PLANEJADO: o que o workflow pedia no shot (targetDoseWeight → targetYield).
+// REALIZADO: o que foi medido (annotations ou o último peso da balança).
+const planDoseOf = (s) => s.planDose ?? s.dose ?? null;
+const planYieldOf = (s) => s.planYield ?? s.yield ?? null;
+const realDoseOf = (s) => s.realDose ?? (s.series && s.series.realDose) ?? null;
+const realYieldOf = (s) => s.realYield ?? (s.series && s.series.realYield) ?? null;
+const planText = (s) => (planDoseOf(s) != null && planYieldOf(s) != null
+  ? `${fmtInt(planDoseOf(s))} → ${fmtInt(planYieldOf(s))}g` : '—');
+const actualText = (s) => {
+  const d = realDoseOf(s) ?? planDoseOf(s), y = realYieldOf(s);
+  return y != null ? `${fmtInt(d)} → ${fmt(y, 1)}g` : '—';
+};
+const ratioOf = (s) => {
+  const d = planDoseOf(s), y = planYieldOf(s);
+  return d && y ? `1:${(y / d).toFixed(1)}` : '—';
+};
 
 // ===================== 07/08 · tela cheia =====================
 function build() {
@@ -105,6 +120,9 @@ const selected = () => state.history.find((s) => s.id === state.selectedShotId) 
 
 function paint() {
   const list = visible();
+  // sem seleção válida na lista visível, o primeiro vira o selecionado — senão o
+  // gráfico e a ficha continuavam mostrando o shot anterior ao filtro
+  if (!list.some((s) => s.id === state.selectedShotId)) state.selectedShotId = list.length ? list[0].id : null;
   screenEl.querySelector('#hs-count').textContent = String(list.length);
 
   const f = state.historyFilter;
@@ -126,9 +144,13 @@ function paint() {
 }
 
 function itemMeta(s) {
-  return [s.when, s.duration != null ? `${Math.round(s.duration)}s` : null,
-    (s.dose != null && s.yield != null) ? `${fmtInt(s.dose)}→${fmtInt(s.yield)}g` : null,
-    ratioOf(s)].filter(Boolean).join(' · ');
+  const plan = (planDoseOf(s) != null && planYieldOf(s) != null)
+    ? `${fmtInt(planDoseOf(s))}→${fmtInt(planYieldOf(s))}g` : null;
+  const real = realYieldOf(s);
+  const realTxt = (real != null && planYieldOf(s) != null && Math.abs(real - planYieldOf(s)) >= 0.5)
+    ? `real ${fmt(real, 1)}g` : null;
+  return [s.when, s.duration != null ? `${Math.round(s.duration)}s` : null, plan, realTxt, ratioOf(s)]
+    .filter(Boolean).join(' · ');
 }
 
 function paintDetail(s) {
@@ -147,7 +169,8 @@ function paintDetail(s) {
 
   stats.innerHTML = [
     ['Duration', s.duration != null ? `${Math.round(s.duration)}s` : '—'],
-    ['Dose → Drink', (s.dose != null && s.yield != null) ? `${fmtInt(s.dose)} → ${fmtInt(s.yield)}g` : '—'],
+    ['Dose → Drink', planText(s)],
+    ['Actual', actualText(s)],
     ['Ratio', ratioOf(s)],
     ['Brew', s.brewTemp != null ? `${fmtInt(s.brewTemp)}°` : '—'],
   ].map(([k, v]) => `<div class="history__stat"><span class="lb">${k}</span><span class="mono history__stat-v">${esc(v)}</span></div>`).join('<span class="history__sep"></span>');
@@ -172,6 +195,8 @@ async function loadSeries(s) {
   s.series = series;
   s.duration = s.duration ?? series.duration;
   if (s.brewTemp == null && series.brewTemp != null) s.brewTemp = series.brewTemp;
+  if (s.realYield == null && series.realYield != null) s.realYield = series.realYield;
+  if (s.realDose == null && series.realDose != null) s.realDose = series.realDose;
   if (state.selectedShotId === s.id) { chart.showShot(series); paintDetail(s); }
 }
 
@@ -201,8 +226,10 @@ function applyShot(s) {
     r.grinderId = gr ? gr.id : (s.grinderId || null);
   }
   if (s.grind != null) r.grind = s.grind;
-  if (s.dose != null) r.dose = s.dose;
-  if (s.yield != null) r.drink = s.yield;
+  // Apply leva o PLANEJADO do shot (18 → 40 g), não o que a balança marcou no fim
+  const pd = planDoseOf(s), py = planYieldOf(s);
+  if (pd != null) r.dose = pd;
+  if (py != null) r.drink = py;
 
   pushWorkflow();
   close();
