@@ -147,6 +147,7 @@ function toShot(r) {
     planDose: r.planDose ?? null, planYield: r.planYield ?? null,
     realDose: r.realDose ?? null, realYield: r.realYield ?? null,
     duration: r.duration ?? null, at: Number.isNaN(at) ? null : at,
+    stopReason: r.stopReason ?? null,
     when: whenLabel(at), series: r.series || null,
   };
 }
