@@ -72,13 +72,10 @@
         <div class="rail__grind-zone" id="grind-zone">
           <div class="rail__grind-row">
             <span class="lb rail__grind-lb">Grind</span>
-            <button class="stepper tap" id="grind-minus" type="button" aria-label="Finer grind">−</button>
-            <button class="mono rail__grind tap" id="grind-value" type="button">—</button>
-            <button class="stepper tap" id="grind-plus" type="button" aria-label="Coarser grind">+</button>
-          </div>
-          <div class="rail__grind-rulerrow">
-            <span class="rail__grind-lb" aria-hidden="true"></span>
-            <div class="ruler" id="grind-ruler" data-field="grind"><b></b><i></i></div>
+            <div class="wheel-wrap">
+              <span class="wheel-halo wheel-halo--neutral" aria-hidden="true"></span>
+              <div class="wheel-items wheel-items--grind" id="grind-items"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -104,8 +101,8 @@
       <div class="rail__full rail__brew" id="brew-zone">
         <span class="lb">Brew</span>
         <div class="rail__brew-wheel">
-          <span class="rail__brew-halo" id="brew-halo" aria-hidden="true"></span>
-          <div class="rail__brew-items" id="brew-items"></div>
+          <span class="wheel-halo wheel-halo--heat" id="brew-halo" aria-hidden="true"></span>
+          <div class="wheel-items" id="brew-items"></div>
           <span class="rail__brew-unit">°C</span>
         </div>
       </div>

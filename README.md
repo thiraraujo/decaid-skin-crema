@@ -46,8 +46,11 @@ As categorias saem do próprio título, que o Decaid escreve como `Categoria/Nom
 (`Pour over basket/V60 22g in, 375g out`, `D-Flow / default`).
 
 Dose e Drink usam presets em botão redondo (18/20/22 g · 36/40/45 g);
-o toque no número abre o teclado para valores fora da lista. O Grind tem a legenda na linha, − / + nas pontas e a régua entre eles; o passo vem do
-moedor cadastrado no Decaid (`Grinder.settingSmallStep`) e, sem esse dado, é 0,05.
+o toque no número abre o teclado para valores fora da lista. **Grind.** Roleta contínua, igual à do Brew, com a legenda na linha: os números acompanham
+o dedo (64 px por passo) e encaixam ao soltar. Tudo neutro — número no texto e halo branco
+a 10 % —, para o azul continuar exclusivo do ratio. Números menores que os do Brew (30 px),
+porque os valores são mais largos (0.70, 20.00). O passo vem do moedor cadastrado no Decaid
+(`Grinder.settingSmallStep`) e, sem esse dado, é 0,05; o toque no número abre o teclado.
 
 **Brew.** Roleta contínua de 80 a 100 °C, em graus inteiros: os números acompanham o dedo
 (64 px por grau; arrastar para a direita traz os menores para o centro) e encaixam ao soltar, quando o valor vai para a máquina. Toque no número
@@ -62,8 +65,12 @@ máquina** (`workflow.profile`), não sobre a cópia da biblioteca — com a có
 desfazia o anterior. Trocar de perfil no carrossel redefine essa base.
 
 O Ratio fica numa pílula com o fundo do acento a 12 % e anel a 35 %, decimal em 55 % na
-linha de base, com um traço abaixo e a divisória entre Dose e Drink (o mesmo 1 px dos
-separadores da coluna). O nome do café diminui quando
+linha de base. Abaixo dele, um ponto marca o topo da divisória entre Dose e Drink (1 px,
+como os separadores da coluna).
+
+**Ritmo da coluna.** A coluna tem altura fixa (800 px do canvas) e distribui o espaço entre
+os blocos, com o mesmo respiro entre eles — sem isso o último bloco (MIX/GROUP) era
+empurrado para fora da tela. O nome do café diminui quando
 quebra linha (46 px → 34 px em duas linhas → 28 px).
 
 O carrossel de favoritos é contínuo: os cards acompanham o dedo durante o arrasto

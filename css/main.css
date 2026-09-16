@@ -161,16 +161,21 @@ html.is-loading .app { opacity: 0; transition: none; }
 }
 
 /* ---------- coluna da receita ---------- */
+/* A coluna tem altura fixa (800 do canvas): os blocos ficam com o MESMO respiro entre
+   si e a sobra é distribuída por igual, em vez de empurrar o último para fora da tela
+   (era assim que MIX/GROUP saíam cortados). */
 .rail {
   width: 300px; flex: none;
   display: flex; flex-direction: column; align-items: center;
-  text-align: center; gap: 12px;
+  justify-content: space-between;
+  text-align: center; gap: 10px;
+  min-height: 0;
   transition: opacity .2s ease-out;
 }
 .rail__full { width: 100%; }
 .rail__sep { padding-top: 12px; border-top: 1px solid var(--hairline); }
 
-.rail__coffee { display: block; padding: 2px 8px; }
+.rail__coffee { display: block; padding: 0 8px; margin-top: -4px; }
 .rail__coffee-name { display: block; font: 600 46px/1.05 var(--sans); }
 .rail__coffee-brand { display: block; font: 500 21px var(--sans); color: var(--blue); margin-top: 2px; }
 
@@ -180,17 +185,14 @@ html.is-loading .app { opacity: 0; transition: none; }
 /* arrastar o dedo em qualquer ponto daqui (inclusive sobre o número) muda a moagem */
 /* Grind no estilo do Grinder: legenda na linha, − logo depois dela, + na borda, número
    centralizado entre os dois e a régua cobrindo exatamente o vão entre os botões. */
-.rail__grind-zone { width: 100%; touch-action: none; padding-bottom: 6px; }
+.rail__grind-zone { width: 100%; touch-action: none; }
 .rail__grind-row { display: flex; align-items: center; gap: 10px; }
 .rail__grind-lb { width: 44px; flex: none; text-align: left; }
-.rail__grind { flex: 1; min-width: 0; font-size: 26px; line-height: 1.1; text-align: center; }
-.rail__grind-rulerrow { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
-.rail__grind-rulerrow .ruler { flex: 1; min-width: 0; margin-top: 0; }
-.rail__grind-row .stepper[disabled] { opacity: .3; }
+.wheel-wrap { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; }
 
 .rail__ratio {
-  width: 100%; margin-top: auto;
-  padding: 22px 0;
+  width: 100%;
+  padding: 14px 0 16px;
   border-top: 1px solid var(--divider);
   border-bottom: 1px solid var(--divider);
 }
@@ -208,9 +210,12 @@ html.is-loading .app { opacity: 0; transition: none; }
 .rail__ratio-value .dec { font-size: .55em; vertical-align: baseline; }
 /* sem receita lida da máquina a pílula some e fica só o traço */
 .rail__ratio-value.is-empty { background: none; box-shadow: none; padding-left: 0; padding-right: 0; }
-/* traço abaixo do ratio e divisória entre Dose e Drink — mesmo 1px dos separadores */
-.rail__ratio-rule { height: 1px; background: var(--divider); margin-top: 16px; }
-.rail__ratio-cols { display: flex; gap: 16px; justify-content: center; margin-top: 12px; position: relative; }
+/* H9: no lugar do traço, um ponto no topo da divisória entre Dose e Drink */
+.rail__ratio-rule {
+  width: 4px; height: 4px; border-radius: 50%;
+  margin: 12px auto 0; background: rgba(var(--line-rgb), var(--a30));
+}
+.rail__ratio-cols { display: flex; gap: 16px; justify-content: center; margin-top: 10px; position: relative; }
 .rail__ratio-cols::before {
   content: ''; position: absolute; top: 0; bottom: 0; left: 50%;
   width: 1px; background: var(--divider);
@@ -219,39 +224,43 @@ html.is-loading .app { opacity: 0; transition: none; }
 .rail__col-value { display: block; width: 100%; font-size: 36px; line-height: 1.1; margin-top: 4px; }
 .rail__col-value--amber { color: var(--amber); }
 .rail__col-value .u, .rail__grind .u { font-size: 15px; }
-.rail__col-chips { display: flex; gap: 6px; justify-content: center; margin-top: 10px; }
+.rail__col-chips { display: flex; gap: 6px; justify-content: center; margin-top: 8px; }
 
 /* Brew: roleta de 80 a 100 °C. O dedo arrasta na horizontal (≈40px por grau), o valor
    do meio é o escolhido e um halo na cor da temperatura marca a posição. Os vizinhos
    ficam na MESMA cor, bem apagados — a cor vem do tema (âmbar → vermelho). */
-.rail__brew { width: 100%; padding: 0 6px; margin-top: auto; touch-action: none; }
-.rail__brew-wheel { position: relative; height: 64px; display: flex; align-items: center; margin-top: 6px; }
-.rail__brew-halo {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  width: 150px; height: 78px; pointer-events: none;
-  background: radial-gradient(closest-side, rgba(var(--heat-rgb), .28), transparent);
-}
+.rail__brew { width: 100%; padding: 0 6px; touch-action: none; }
+.rail__brew-wheel { position: relative; height: 56px; display: flex; align-items: center; margin-top: 2px; }
 /* os números são posicionados pelo JS (layoutBrewWheel): tamanho, opacidade e posição
    saem da distância até o centro, então o movimento acompanha o dedo sem pular */
-.rail__brew-items {
-  position: relative; flex: 1; min-width: 0; height: 64px; overflow: hidden;
+/* roleta (Brew e Grind): os itens são posicionados pelo JS — src/wheel.js */
+.wheel-items {
+  position: relative; flex: 1; min-width: 0; height: 56px; overflow: hidden;
   font-family: var(--mono);
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent);
 }
-.rail__brew-items > span {
+.wheel-items--grind { height: 58px; }
+.wheel-items > span {
   position: absolute; left: 50%; top: 50%;
   line-height: 1; white-space: nowrap; will-change: transform, font-size, opacity;
 }
+/* halo atrás do valor escolhido */
+.wheel-halo {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 150px; height: 74px; pointer-events: none;
+}
+.wheel-halo--heat { background: radial-gradient(closest-side, rgba(var(--heat-rgb), .28), transparent); }
+.wheel-halo--neutral { background: radial-gradient(closest-side, rgba(var(--line-rgb), .10), transparent); }
 /* a unidade fica PARADA na ponta da linha: rolar os números não mexe nela */
 .rail__brew-unit {
   position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
-  font: 400 15px var(--mono); color: var(--label); pointer-events: none;
+  font: 400 13px var(--mono); color: var(--label); pointer-events: none;
 }
 
 .rail__machine {
-  display: block; width: 100%; height: 150px;
-  margin-top: 10px; padding: 14px 4px 0;
+  display: block; width: 100%; height: 150px; flex: none;
+  margin-top: 0; padding: 12px 4px 0;
   border-top: 1px solid var(--divider);
   border-radius: 0;
   display: flex; flex-direction: column;
