@@ -51,7 +51,8 @@ moedor cadastrado no Decaid (`Grinder.settingSmallStep`) e, sem esse dado, é 0,
 
 **Brew.** Roleta contínua de 80 a 100 °C, em graus inteiros: os números acompanham o dedo
 (64 px por grau) e encaixam ao soltar, quando o valor vai para a máquina. Toque no número
-central abre o teclado. A cor sai do tema, interpolando `--amber` (80 °C) e `--red`
+central abre o teclado. A unidade `°C` fica parada na ponta da linha — rolar os números
+não mexe nela. A cor sai do tema, interpolando `--amber` (80 °C) e `--red`
 (100 °C), com um halo na mesma cor atrás do valor e os vizinhos apagados (35 % e 15 %).
 A documentação não fixa limites para `ProfileStep.temperature`; o teto real é do firmware,
 que recebe a temperatura como `temp × 2` em 1 byte (127,5 °C, passo 0,5 °C).

@@ -134,7 +134,7 @@ function renderBrewWheel() {
   for (let d = -BREW_VISIBLE; d <= BREW_VISIBLE; d++) {
     const t = Math.round(v) + d;
     if (t < f.min || t > f.max) continue;
-    html.push(`<span data-d="${d}" style="color:rgb(${heatRgb(t).join(',')})">${brewLabel(t)}<span class="u"> °C</span></span>`);
+    html.push(`<span data-d="${d}" style="color:rgb(${heatRgb(t).join(',')})">${brewLabel(t)}</span>`);
   }
   items.innerHTML = html.join('');
   layoutBrewWheel(0);
