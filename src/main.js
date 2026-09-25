@@ -192,9 +192,20 @@ async function boot() {
   // Bestpresso usa o mesmo critério (ESPRESSO_EXTRACTION_SUBSTATES).
   const EXTRACTION_SUBSTATES = new Set(['preinfusion', 'pouring']);
   let lastSnapshotAt = 0;
+  let lastSnapshotPrint = null, lastSnapshotChangeAt = 0;
+  let hotRef = null, hotMoveAt = 0;
 
   source.onSnapshot((m) => {
     lastSnapshotAt = Date.now();
+    // Dois sinais de vida, para o watchdog lá embaixo:
+    //  · o frame MUDA — de preferência pelo carimbo da máquina; sem ele, pelos valores
+    //  · a temperatura SOBE — é o que define "aquecendo" (mesmo critério do plugin
+    //    time-to-ready: heatingRate <= 0 → 'not_heating')
+    const print = m.ts || [m.state, m.substate, m.pressure, m.flow, m.mixTemp, m.groupTemp,
+      m.targetMixTemp, m.targetGroupTemp].join('|');
+    if (print !== lastSnapshotPrint) { lastSnapshotPrint = print; lastSnapshotChangeAt = Date.now(); }
+    const hot = Math.max(m.mixTemp || 0, m.groupTemp || 0);
+    if (hotRef == null || Math.abs(hot - hotRef) >= 0.1) { hotRef = hot; hotMoveAt = Date.now(); }
     const mc = state.machine;
     mc.mixTemp = m.mixTemp;
     mc.groupTemp = m.groupTemp;
@@ -208,23 +219,31 @@ async function boot() {
     mc.readiness = readiness.evaluate(mc);
     renderMachine();
     if (!m.running) return;
-    // cabeça do shot (preparingForShot) entra; a cauda depois de despejar, não
     const extracting = EXTRACTION_SUBSTATES.has((m.substate || '').toLowerCase());
-    if (extracting) state.live.poured = true;
-    if (!extracting && state.live.poured) { state.live.frozen = true; return; }   // acabou de despejar: congela a curva
+    // A CABEÇA do shot (preparingForShot) fica de fora: ela ainda carrega o
+    // profileFrame do shot anterior — era a fase fantasma que aparecia antes do
+    // Prefill — e o shot gravado também começa na pré-infusão. A cauda depois de
+    // despejar continua fora (era o ruído no fim da curva).
+    if (!extracting && !state.live.poured) return;
+    if (extracting) {
+      state.live.poured = true;
+      if (state.live.t0 == null) state.live.t0 = m.t;   // t = 0 na 1ª amostra de extração
+    }
+    if (!extracting && state.live.poured) { state.live.frozen = true; return; }
+    const t = m.t - (state.live.t0 || 0);
     const s = state.live.series;
-    s.pressure.push([m.t, m.pressure]);
-    s.flow.push([m.t, m.flow]);
-    s.temp.push([m.t, m.temp]);
+    s.pressure.push([t, m.pressure]);
+    s.flow.push([t, m.flow]);
+    s.temp.push([t, m.temp]);
     // linha planejada acompanha o shot: alvos que a máquina manda a cada amostra
     const pump = pumpAt(state.live.profile, m.frame);
-    s.pressureTarget.push([m.t, activeTarget(m.targetPressure, 'pressure', pump)]);
-    s.flowTarget.push([m.t, activeTarget(m.targetFlow, 'flow', pump)]);
+    s.pressureTarget.push([t, activeTarget(m.targetPressure, 'pressure', pump)]);
+    s.flowTarget.push([t, activeTarget(m.targetFlow, 'flow', pump)]);
     for (const k of Object.keys(s)) if (s[k].length > 900) s[k].shift();
     liveChart.update(s);
-    state.live.t = m.t;
+    state.live.t = t;
     onShotSample({
-      t: m.t, frame: Number.isInteger(m.frame) ? m.frame : null,
+      t, frame: Number.isInteger(m.frame) ? m.frame : null,
       pressure: m.pressure, flow: m.flow, temp: m.temp,
       weight: mc.scale.weight || 0,
     });
@@ -282,7 +301,7 @@ async function boot() {
   source.onShotStart(() => {
     const p = currentProfile();
     state.live = {
-      running: true, t: 0, poured: false, frozen: false, profile: (p && p.raw) || null,
+      running: true, t: 0, t0: null, poured: false, frozen: false, profile: (p && p.raw) || null,
       series: { pressure: [], flow: [], temp: [], weight: [], pressureTarget: [], flowTarget: [] },
     };
     onShotStarted();
@@ -297,17 +316,37 @@ async function boot() {
   // A máquina desligada no botão não manda snapshot nenhum (websocket_v1.yml: o socket
   // "remains open and silent while no machine is attached"). Sem frames por 10 s, a
   // pílula vira DISCONNECTED em vez de congelar no último estado (ex.: HEATING).
+  //
+  // E quando o Decaid continua repetindo o ÚLTIMO frame (a máquina cai no botão físico
+  // mas o /devices ainda a anuncia conectada), o socket não fica mudo — fica congelado.
+  // Aí vale a regra do dono da máquina: aquecendo é aquecendo, a temperatura tem de
+  // andar. Só dispara com a pílula em HEATING — máquina quente e parada é READY, não
+  // HEATING, então 98 °C estáveis não caem aqui — e nunca durante um shot.
   const SNAPSHOT_TIMEOUT_MS = 10000;
+  const FROZEN_TIMEOUT_MS = 10000;
   if (useBridge) {
-    setInterval(() => {
+    const drop = (motivo) => {
       const mc = state.machine;
-      if (!lastSnapshotAt || Date.now() - lastSnapshotAt < SNAPSHOT_TIMEOUT_MS) return;
-      if (mc.readiness === 'disconnected') return;
-      console.warn('[CREMA] sem snapshot da máquina há 10 s → desconectada');
+      console.warn(`[CREMA] ${motivo} → máquina desconectada`);
       mc.state = 'disconnected';
       mc.readiness = 'disconnected';
       readiness.reset();
       renderMachine();
+    };
+    setInterval(() => {
+      const mc = state.machine;
+      if (mc.readiness === 'disconnected') return;
+      if (!lastSnapshotAt) return;
+      const now = Date.now();
+      if (now - lastSnapshotAt >= SNAPSHOT_TIMEOUT_MS) return drop('sem snapshot da máquina há 10 s');
+      if (state.live.running) return;                       // nunca no meio de um shot
+      // stream travado: o Decaid repete o mesmo frame (mesmo carimbo) — a máquina saiu
+      if (now - lastSnapshotChangeAt >= FROZEN_TIMEOUT_MS) return drop('mesmo frame há 10 s');
+      // e a regra do dono: aquecendo é aquecendo, a temperatura tem de se mexer
+      // (0,1 °C para cima ou para baixo já conta). Só vale com a pílula em HEATING —
+      // máquina quente e parada é READY, não HEATING, então 98 °C estáveis não caem aqui.
+      if (mc.readiness !== 'heating') { hotRef = null; hotMoveAt = now; return; }
+      if (now - hotMoveAt >= FROZEN_TIMEOUT_MS) drop('HEATING com a temperatura parada há 10 s');
     }, 2000);
   }
 

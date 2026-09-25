@@ -86,6 +86,7 @@ export function createApiSource() {
           cb({
             t,
             running,
+            ts: m.timestamp || null,     // carimbo da própria máquina (websocket_v1.yml)
             state: st.state || 'idle',
             substate: st.substate || '',
             pressure: m.pressure ?? 0,
@@ -430,10 +431,24 @@ function tsSeconds(m) {
   const p = Date.parse(ts);
   return isNaN(p) ? 0 : p / 1000;
 }
+// extração = pré-infusão + despejo (websocket_v1.yml · MachineSubstate)
+const SHOT_EXTRACTION_SUBSTATES = new Set(['preinfusion', 'pouring']);
+
 function mapShotMeasurements(shot) {
   if (!shot) return null;
-  const ms = shot.measurements || shot.samples || shot.data || [];
-  if (!ms.length) { console.warn('[CREMA] shot sem measurements', shot && Object.keys(shot)); return null; }
+  const all = shot.measurements || shot.samples || shot.data || [];
+  if (!all.length) { console.warn('[CREMA] shot sem measurements', shot && Object.keys(shot)); return null; }
+  // Só a EXTRAÇÃO entra no gráfico e nas fases. A cauda de preparo (preparingForShot)
+  // ainda carrega o profileFrame do shot ANTERIOR — era isso que punha uma fase
+  // fantasma ("5 Pressurize") antes do Prefill. Mesmo critério da Bestpresso
+  // (src/api/decaid/adapters.ts · ESPRESSO_EXTRACTION_SUBSTATES).
+  const subOf = (m) => {
+    const st = (m.machine || m).state;
+    return String((st && st.substate) || (m.machine || m).substate || '').toLowerCase();
+  };
+  const hasSubstates = all.some((m) => subOf(m));
+  const ms = hasSubstates ? all.filter((m) => SHOT_EXTRACTION_SUBSTATES.has(subOf(m))) : all;
+  if (!ms.length) { console.warn('[CREMA] shot sem amostras de extração'); return null; }
   const pr = shot.workflow && shot.workflow.profile;
   const pressure = [], flow = [], temp = [], weight = [];
   const pressureTarget = [], flowTarget = [];
@@ -457,7 +472,10 @@ function mapShotMeasurements(shot) {
         if (lastPh) lastPh.end = t;
         const step = pr && Array.isArray(pr.steps) ? pr.steps[mt.profileFrame] : null;
         realPhases.push({
-          frame: mt.profileFrame, n: mt.profileFrame + 1, start: realPhases.length ? t : 0, end: t,
+          // n = ordem de ocorrência (1, 2, 3…), como a Bestpresso: a DE1 pula steps por
+          // condição de saída e steps de 1 amostra somem, então numerar pelo frame
+          // deixava buracos (…4, 5, 7) na ficha
+          frame: mt.profileFrame, n: realPhases.length + 1, start: realPhases.length ? t : 0, end: t,
           label: (step && step.name) || `Step ${mt.profileFrame + 1}`,
         });
       } else lastPh.end = t;
