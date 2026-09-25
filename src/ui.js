@@ -2,7 +2,7 @@
 // Render puro a partir de `state` + interações da coluna da receita, carrossel e rodapé.
 
 import { createWheel } from './wheel.js';
-import { state, setState, FIELDS, PRESETS, fieldFor, ratioText, clampStaticSeconds, tankMillilitres, TANK_FULL_ML } from './store.js';
+import { state, setState, FIELDS, PRESETS, fieldFor, ratioText, clampStaticSeconds, tankMillilitres, tankPercent } from './store.js';
 import { miniChart } from './chart.js';
 import { sleepMachine, wakeMachine, openAppSettings } from './host.js';
 import { syncSaver } from './saver.js';
@@ -289,9 +289,10 @@ function renderTank() {
     return;
   }
 
-  // mm → ml (tabela do tanque) → % de TANK_FULL_ML; cores do handoff: <20% âmbar, <10% vermelho
+  // % pelo NÍVEL EM MM (cheio = 43 mm) e volume pela tabela mm → ml;
+  // cores do handoff: <20% âmbar, <10% vermelho
   const ml = tankMillilitres(level);
-  const pct = Math.max(0, Math.min(100, (ml / TANK_FULL_ML) * 100));
+  const pct = tankPercent(level);
   $('tank-fill').style.height = `${pct}%`;
   $('tank-pct').style.bottom = `${pct}%`;
   $('tank-pct').textContent = `${Math.round(pct)}%`;
