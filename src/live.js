@@ -15,6 +15,7 @@ const DASH = '—';
 let chart = null;
 let steps = [];          // [{ n, name, seconds }] do perfil
 let phases = [];         // fases já iniciadas, com os agregados
+let seq = 0;             // contador da ordem de ocorrência (numeração dos blocos)
 let current = -1;
 let scrolledTo = -1;
 
@@ -70,6 +71,7 @@ export function renderLiveHeader(profile) {
 export function startLive(profile) {
   steps = stepsOf(profile);
   phases = [];
+  seq = 0;
   current = -1;
   scrolledTo = -1;
   renderLiveHeader(profile);
@@ -112,8 +114,12 @@ export function onLiveSample(m) {
     if (current >= 0 && phases[current]) phases[current].end = m.t;
     current = idx;
     const st = steps[idx] || { n: idx + 1, name: `Step ${idx + 1}` };
+    // número = ORDEM em que a fase aconteceu. A DE1 pula steps por condição de saída
+    // e steps de uma amostra só não chegam a aparecer no socket: numerar pelo índice
+    // do step deixava buracos (1, 3, 4, 5, 7). A Bestpresso numera igual.
+    seq += 1;
     phases[idx] = {
-      n: st.n, name: st.name, start: m.t, end: m.t,
+      n: seq, name: st.name, start: m.t, end: m.t,
       yieldEnd: m.weight, tempMin: m.temp, tempMax: m.temp,
       pressStart: m.pressure, pressPeak: m.pressure, pressEnd: m.pressure,
       flowStart: m.flow, flowEnd: m.flow,
