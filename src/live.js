@@ -7,6 +7,7 @@
 
 import { state, ratioText } from './store.js';
 import { createChart } from './chart.js';
+import { exitLabel, UNKNOWN_EXIT } from './exit.js';
 
 const $ = (id) => document.getElementById(id);
 const host = () => $('live-phases');
@@ -16,6 +17,7 @@ let chart = null;
 let steps = [];          // [{ n, name, seconds }] do perfil
 let phases = [];         // fases já iniciadas, com os agregados
 let seq = 0;             // contador da ordem de ocorrência (numeração dos blocos)
+let ended = false;       // shot terminado: a última fase deixa de ser 'running'
 let current = -1;
 let scrolledTo = -1;
 
@@ -72,6 +74,7 @@ export function startLive(profile) {
   steps = stepsOf(profile);
   phases = [];
   seq = 0;
+  ended = false;
   current = -1;
   scrolledTo = -1;
   renderLiveHeader(profile);
@@ -82,7 +85,7 @@ export function startLive(profile) {
 function stepsOf(profile) {
   const raw = profile && profile.raw;
   if (raw && Array.isArray(raw.steps) && raw.steps.length) {
-    return raw.steps.map((s, i) => ({ n: i + 1, name: s.name || `Step ${i + 1}`, seconds: s.seconds ?? s.duration ?? 10 }));
+    return raw.steps.map((s, i) => ({ n: i + 1, name: s.name || `Step ${i + 1}`, seconds: s.seconds ?? s.duration ?? 10, raw: s }));
   }
   // sem perfil bruto (mock/dev): usa as fases já derivadas do plano
   const ph = (profile && profile.phases) || [];
@@ -119,7 +122,7 @@ export function onLiveSample(m) {
     // do step deixava buracos (1, 3, 4, 5, 7). A Bestpresso numera igual.
     seq += 1;
     phases[idx] = {
-      n: seq, name: st.name, start: m.t, end: m.t,
+      n: seq, name: st.name, idx, start: m.t, end: m.t,
       yieldEnd: m.weight, tempMin: m.temp, tempMax: m.temp,
       pressStart: m.pressure, pressPeak: m.pressure, pressEnd: m.pressure,
       flowStart: m.flow, flowEnd: m.flow,
@@ -143,6 +146,7 @@ export function onLiveSample(m) {
 }
 
 export function endLive() {
+  ended = true;
   if (current >= 0 && phases[current]) renderPhases();
   const host = $('live-phases');
   if (host) scrollToEnd(host);
@@ -184,7 +188,59 @@ function cardHTML(p, isCurrent) {
       <div class="phase-card__row"><span class="lb">Temp</span><span class="phase-card__v phase-card__v--temp" data-role="temp">${span(p.tempMin, p.tempMax)}<span class="u"> °</span></span></div>
       <div class="phase-card__row"><span class="lb">Pressure</span><span class="phase-card__v phase-card__v--press${vClass(press)}" data-role="press">${press}</span></div>
       <div class="phase-card__row"><span class="lb">Flow</span><span class="phase-card__v phase-card__v--flow${vClass(flow)}" data-role="flow">${flow}</span></div>
+      <div class="phase-card__exit${exitClass(p, isCurrent)}" data-role="exit">${exitHTML(p, isCurrent)}</div>
     </div>`;
+}
+
+// Por que a fase terminou (src/exit.js). A fase corrente ainda não terminou: fica
+// "running" até fechar, para o card não mudar de altura no meio do shot.
+// a fase onde o shot PAROU é a última que começou, com o shot já encerrado — não
+// necessariamente o último step do perfil (parada manual, peso alvo, erro…)
+const isStop = (p) => ended && p.n === seq;
+function exitOf(p) {
+  const st = steps[p.idx];
+  return exitLabel(st && st.raw, p, { isLast: isStop(p), stopReason: state.live.stopReason });
+}
+function exitText(p, isCurrent) {
+  if (isCurrent) return 'running…';
+  return exitOf(p) || UNKNOWN_EXIT;
+}
+// ▶| = o perfil avançou de fase · ■ = aqui o shot parou
+function exitHTML(p, isCurrent) {
+  const stop = !isCurrent && isStop(p);
+  const icon = stop ? '■' : '▶|';
+  const cls = stop ? ' phase-card__exit-ic--stop' : '';
+  return `<span class="phase-card__exit-ic${cls}">${icon}</span><span>${esc(exitText(p, isCurrent))}</span>`;
+}
+function exitClass(p, isCurrent) {
+  if (isCurrent) return ' phase-card__exit--wait';
+  return exitOf(p) ? '' : ' phase-card__exit--none';
+}
+
+// Texto maior que a faixa: encolhe em degraus e, no limite, corta com reticências.
+function fitExitBands(root) {
+  for (const el of (root || document).querySelectorAll('.phase-card__exit')) {
+    // mede o TEXTO, não a faixa: o texto já corta sozinho (text-overflow), então a
+    // faixa nunca "estoura" e o laço nunca encolhia nada
+    const txt = el.lastElementChild;
+    if (!txt) continue;
+    // card entrando: a largura ainda está animando de 100px até 212px — medir agora
+    // encolhia a fonte à toa. O ajuste roda de novo quando a animação acaba.
+    if (el.closest('.phase-card.is-entering')) continue;
+    for (const px of [11, 10, 9]) {
+      el.style.fontSize = `${px}px`;
+      if (txt.scrollWidth <= txt.clientWidth + 1) break;
+    }
+  }
+}
+
+// troca o conteúdo da faixa de uma fase que acabou de fechar
+function paintExit(card, p) {
+  const band = card.querySelector('[data-role="exit"]');
+  if (!band) return;
+  band.innerHTML = exitHTML(p, false);
+  band.className = `phase-card__exit${exitClass(p, false)}`;
+  fitExitBands(card);
 }
 
 // Um card por fase que JÁ começou, criado no momento em que ela começa — sem vaga
@@ -193,7 +249,8 @@ function cardHTML(p, isCurrent) {
 function renderPhases() {
   const host = $('live-phases');
   if (!host) return;
-  host.innerHTML = phases.filter(Boolean).map((p, i, all) => cardHTML(p, i === all.length - 1)).join('');
+  host.innerHTML = phases.filter(Boolean).map((p, i, all) => cardHTML(p, !ended && i === all.length - 1)).join('');
+  fitExitBands(host);
   scrolledTo = current;
   scrollToEnd(host);
 }
@@ -203,13 +260,20 @@ function appendPhase(p) {
   const host = $('live-phases');
   if (!host) return;
   const prev = host.querySelector('.phase-card.is-current');
-  if (prev) prev.classList.remove('is-current');
+  if (prev) {
+    prev.classList.remove('is-current');
+    // a fase anterior acabou de fechar: 'running…' dá lugar ao motivo de saída
+    const closed = phases.filter(Boolean).find((x) => String(x.n) === prev.dataset.n);
+    if (closed) paintExit(prev, closed);
+  }
   const wrap = document.createElement('div');
   wrap.innerHTML = cardHTML(p, true).trim();
   const card = wrap.firstElementChild;
   card.classList.add('is-entering');
   host.appendChild(card);
+  fitExitBands(card);
   requestAnimationFrame(() => requestAnimationFrame(() => card.classList.remove('is-entering')));
+  setTimeout(() => fitExitBands(card), 320);   // depois da animação de largura (.25s)
   scrolledTo = current;
   scrollToEnd(host);
 }

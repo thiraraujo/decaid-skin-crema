@@ -564,10 +564,29 @@ html.is-loading .app { opacity: 0; transition: none; }
 .phase-card__v--press { color: var(--green); }
 .phase-card__v--flow { color: var(--blue); }
 
+/* faixa no rodapé: por que a fase terminou (src/exit.js). Categoria diferente dos
+   números acima — por isso fundo e filete próprios, e não mais uma linha de valor.
+   O texto encolhe em degraus (live.js · fitExitBands) e corta com reticências. */
+.phase-card__exit {
+  margin: 4px -16px -12px; padding: 7px 16px 9px;
+  border-top: 1px solid var(--border-soft);
+  background: rgba(var(--line-rgb), .03);
+  border-radius: 0 0 13px 13px;
+  font: 500 11px var(--mono); color: var(--text-2);
+  display: flex; align-items: baseline; justify-content: center; gap: 6px;
+  white-space: nowrap; overflow: hidden;
+}
+.phase-card__exit > span:last-child { overflow: hidden; text-overflow: ellipsis; }
+.phase-card__exit-ic { flex: none; color: var(--muted); font-size: .92em; }
+.phase-card__exit-ic--stop { color: var(--amber); }
+.phase-card__exit--none,
+.phase-card__exit--wait { color: var(--muted); }
+
 .phase-card.is-entering { width: 100px; }
 .phase-card.is-entering .phase-card__row,
+.phase-card.is-entering .phase-card__exit,
 .phase-card.is-entering .phase-card__time { opacity: 0; }
-.phase-card__row, .phase-card__time { transition: opacity .25s ease-out; }
+.phase-card__row, .phase-card__time, .phase-card__exit { transition: opacity .25s ease-out; }
 
 .phase-card.is-current {
   opacity: 1;

@@ -35,7 +35,7 @@ export const state = {
   staticTimer: 40,            // STATIC ligado: eixo X do shot ao vivo começa em Y s (prefs do app)
 
   // shot ao vivo
-  live: { running: false, t: 0, t0: null, poured: false, frozen: false, profile: null, series: { pressure: [], flow: [], temp: [], weight: [], pressureTarget: [], flowTarget: [] } },
+  live: { running: false, t: 0, t0: null, stopReason: null, poured: false, frozen: false, profile: null, series: { pressure: [], flow: [], temp: [], weight: [], pressureTarget: [], flowTarget: [] } },
 
   // máquina
   machine: {

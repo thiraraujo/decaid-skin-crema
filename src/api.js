@@ -42,6 +42,7 @@ export function createApiSource() {
   const endCbs = new Set();
   const waterCbs = new Set();
   const deviceCbs = new Set();
+  const shotStateCbs = new Set();
   const sockets = [];
 
   // ciclo de vida do shot, derivado do estado da máquina.
@@ -67,6 +68,7 @@ export function createApiSource() {
     onScale(cb) { scaleCbs.add(cb); return () => scaleCbs.delete(cb); },
     onWaterLevels(cb) { waterCbs.add(cb); return () => waterCbs.delete(cb); },
     onDevices(cb) { deviceCbs.add(cb); return () => deviceCbs.delete(cb); },
+    onShotState(cb) { shotStateCbs.add(cb); return () => shotStateCbs.delete(cb); },
     onShotStart(cb) { startCbs.add(cb); return () => startCbs.delete(cb); },
     onShotEnd(cb) { endCbs.add(cb); return () => endCbs.delete(cb); },
 
@@ -142,6 +144,15 @@ export function createApiSource() {
             error: (m.connectionStatus && m.connectionStatus.error) || null,
           });
         }
+      });
+
+      // /machine/shotState: o sequenciador conta o que decidiu — `decision.kind`
+      // ('advance' | 'stop' | 'abort' | 'terminal' | 'finalize') e `decision.reason`
+      // (conjunto ABERTO). É o motivo de parada REAL, ao vivo, sem inferir nada.
+      openWS('/machine/shotState', (m) => {
+        const d = m && m.decision;
+        if (!d) return;
+        for (const cb of shotStateCbs) cb({ kind: d.kind || null, reason: d.reason || null });
       });
 
       // /machine/waterLevels: nível do tanque em MILÍMETROS + limiar de recarga.
