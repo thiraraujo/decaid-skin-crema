@@ -11,13 +11,18 @@ const T_MAX = 30;
 const TICK_MS = 100;   // ~10 Hz, como o /machine/snapshot do Bridge
 
 // steps do perfil simulado — dão nome aos blocos de fase da tela 02
+// `exit` e `weight` existem nos perfis reais e alimentam o motivo de saída da fase
+// (src/exit.js): sem eles o mock mostrava sempre "Exit unknown".
+// Os tempos somam T_MAX: assim o shot simulado anda no mesmo relógio dos steps e o
+// motivo de saída (src/exit.js) pode ser exercitado em dev. `exit` e `weight`
+// existem nos perfis reais — sem eles o mock mostrava sempre "Exit unknown".
 const SIM_STEPS = [
-  { name: 'Prefill', seconds: 6, temperature: 88 },
-  { name: 'Preinfusion', seconds: 10, temperature: 88 },
-  { name: 'Dripping', seconds: 4, temperature: 88 },
-  { name: 'Pressurize', seconds: 6, temperature: 88 },
-  { name: 'Extraction', seconds: 23, temperature: 88 },
-  { name: 'Decline', seconds: 10, temperature: 88 },
+  { name: 'Prefill', seconds: 3, temperature: 88, exit: null, weight: 0 },
+  { name: 'Preinfusion', seconds: 5, temperature: 88, exit: { type: 'pressure', condition: 'over', value: 3 }, weight: 0 },
+  { name: 'Dripping', seconds: 2, temperature: 88, exit: null, weight: 0 },
+  { name: 'Pressurize', seconds: 4, temperature: 88, exit: { type: 'pressure', condition: 'over', value: 8.5 }, weight: 0 },
+  { name: 'Extraction', seconds: 11, temperature: 88, exit: { type: 'flow', condition: 'under', value: 2 }, weight: 0 },
+  { name: 'Decline', seconds: 5, temperature: 88, exit: null, weight: 0 },
 ];
 const SIM_TOTAL = SIM_STEPS.reduce((a, s) => a + s.seconds, 0);
 

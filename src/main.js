@@ -271,6 +271,17 @@ async function boot() {
     renderMachine();
   });
 
+  // motivo REAL da parada do shot, ao vivo (ws/v1/machine/shotState · decision).
+  // Só 'stop' e 'terminal' dizem por que o shot acabou; 'advance' só conta que o
+  // perfil passou de step, e 'finalize' é a janela de assentamento depois da parada.
+  if (source.onShotState) {
+    source.onShotState((d) => {
+      if (d.kind === 'stop' || d.kind === 'terminal' || d.kind === 'abort') {
+        state.live.stopReason = d.reason || null;
+      }
+    });
+  }
+
   // estado de conexão + erros de BLE — a fonte correta, segundo a documentação
   if (source.onDevices) {
     source.onDevices((d) => {
@@ -301,7 +312,7 @@ async function boot() {
   source.onShotStart(() => {
     const p = currentProfile();
     state.live = {
-      running: true, t: 0, t0: null, poured: false, frozen: false, profile: (p && p.raw) || null,
+      running: true, t: 0, t0: null, stopReason: null, poured: false, frozen: false, profile: (p && p.raw) || null,
       series: { pressure: [], flow: [], temp: [], weight: [], pressureTarget: [], flowTarget: [] },
     };
     onShotStarted();
